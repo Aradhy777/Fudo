@@ -3,10 +3,22 @@ ExpenseTrack - Budget Management Routes & API
 Supports total monthly budget & category-specific limits with real-time 80% and 100% threshold alerts.
 """
 
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
-from flask import Blueprint, request, jsonify, render_template
-from database.db import query_db, execute_db
+from flask import Blueprint, request, jsonify, render_template, current_app, session
+from repositories.base import InvalidCategoryError, UserAccountNotFoundError
+from repositories.budget_repo import BudgetRepository
 from routes.auth_helper import login_required, get_current_user_id
+from routes.validators import (
+    ZERO_DEC,
+    TENTH_QUANT,
+    HUNDRED_DEC,
+    parse_int_param,
+    validate_amount,
+    to_decimal,
+    get_json_dict,
+    date_range_for_month,
+)
 
 budgets_bp = Blueprint("budgets", __name__)
 
@@ -22,80 +34,50 @@ def budgets_page():
 def get_budgets():
     user_id = get_current_user_id()
     now = datetime.now()
-    month = int(request.args.get("month", now.month))
-    year = int(request.args.get("year", now.year))
 
-    # 1. Total Monthly Overall Budget
-    overall_budget_row = query_db(
-        """
-        SELECT id, amount, created_at, updated_at
-        FROM budgets
-        WHERE user_id = %s AND category_id IS NULL AND month = %s AND year = %s;
-        """,
-        (user_id, month, year),
-        one=True,
-    )
-    overall_budget = float(overall_budget_row["amount"]) if overall_budget_row else 0.00
+    try:
+        month = parse_int_param(request.args.get("month"), default=now.month, min_val=1, max_val=12, field_name="Month")
+        year = parse_int_param(request.args.get("year"), default=now.year, min_val=2020, max_val=2100, field_name="Year")
+    except ValueError as ve:
+        return jsonify({"error": "Validation Error", "message": str(ve)}), 400
+
+    budget_data = BudgetRepository().get_monthly_budget_data(user_id, month, year)
+    overall_budget_row = budget_data["overall_budget"]
+    overall_budget_dec = overall_budget_row["amount"] if overall_budget_row else ZERO_DEC
     overall_budget_id = overall_budget_row["id"] if overall_budget_row else None
+    total_spent_dec = budget_data["total_spent"]
+    category_rows = budget_data["categories"]
 
-    # Total actual expenses for this month
-    total_spent_row = query_db(
-        """
-        SELECT COALESCE(SUM(amount), 0.00) AS total_spent
-        FROM expenses
-        WHERE user_id = %s AND MONTH(expense_date) = %s AND YEAR(expense_date) = %s;
-        """,
-        (user_id, month, year),
-        one=True,
+    overall_pct_dec = (
+        (total_spent_dec / overall_budget_dec * HUNDRED_DEC).quantize(TENTH_QUANT, rounding=ROUND_HALF_UP)
+        if overall_budget_dec > ZERO_DEC
+        else Decimal("0.0")
     )
-    total_spent = float(total_spent_row["total_spent"])
-
-    overall_pct = (total_spent / overall_budget * 100) if overall_budget > 0 else 0
     overall_status = "normal"
-    if overall_budget > 0:
-        if total_spent > overall_budget:
+    if overall_budget_dec > ZERO_DEC:
+        if total_spent_dec > overall_budget_dec:
             overall_status = "exceeded"
-        elif overall_pct >= 80.0:
+        elif overall_pct_dec >= Decimal("80.0"):
             overall_status = "warning"
 
-    # 2. Category-Specific Budgets
-    category_rows = query_db(
-        """
-        SELECT c.id AS category_id, c.name, c.icon, c.color,
-               b.id AS budget_id,
-               b.amount AS budget_limit,
-               COALESCE(e.total_spent, 0.00) AS total_spent
-        FROM categories c
-        LEFT JOIN budgets b
-               ON c.id = b.category_id
-              AND b.user_id = %s
-              AND b.month = %s
-              AND b.year = %s
-        LEFT JOIN (
-            SELECT category_id, SUM(amount) AS total_spent
-            FROM expenses
-            WHERE user_id = %s
-              AND MONTH(expense_date) = %s
-              AND YEAR(expense_date) = %s
-            GROUP BY category_id
-        ) e ON c.id = e.category_id
-        ORDER BY c.id ASC;
-        """,
-        (user_id, month, year, user_id, month, year),
-    )
+    overall_rem_dec = max(ZERO_DEC, overall_budget_dec - total_spent_dec) if overall_budget_dec > ZERO_DEC else ZERO_DEC
 
     category_budgets = []
     for row in category_rows:
-        limit = float(row["budget_limit"]) if row["budget_limit"] is not None else None
-        spent = float(row["total_spent"])
-        pct = (spent / limit * 100) if limit and limit > 0 else 0
-        rem = max(0.00, limit - spent) if limit is not None else None
+        limit_dec = to_decimal(row["budget_limit"]) if row["budget_limit"] is not None else None
+        spent_dec = to_decimal(row["total_spent"])
+        pct_dec = (
+            (spent_dec / limit_dec * HUNDRED_DEC).quantize(TENTH_QUANT, rounding=ROUND_HALF_UP)
+            if (limit_dec is not None and limit_dec > ZERO_DEC)
+            else Decimal("0.0")
+        )
+        rem_dec = max(ZERO_DEC, limit_dec - spent_dec) if limit_dec is not None else None
 
         status = "none"
-        if limit is not None and limit > 0:
-            if spent > limit:
+        if limit_dec is not None and limit_dec > ZERO_DEC:
+            if spent_dec > limit_dec:
                 status = "exceeded"
-            elif pct >= 80.0:
+            elif pct_dec >= Decimal("80.0"):
                 status = "warning"
             else:
                 status = "normal"
@@ -106,10 +88,10 @@ def get_budgets():
             "icon": row["icon"],
             "color": row["color"],
             "budget_id": row["budget_id"],
-            "budget_limit": limit,
-            "total_spent": spent,
-            "remaining": rem,
-            "percentage": round(pct, 1),
+            "budget_limit": float(limit_dec) if limit_dec is not None else None,
+            "total_spent": float(spent_dec),
+            "remaining": float(rem_dec) if rem_dec is not None else None,
+            "percentage": float(pct_dec),
             "status": status,
         })
 
@@ -118,10 +100,10 @@ def get_budgets():
         "year": year,
         "overall": {
             "budget_id": overall_budget_id,
-            "budget_limit": overall_budget,
-            "total_spent": total_spent,
-            "remaining": max(0.00, overall_budget - total_spent) if overall_budget > 0 else 0.00,
-            "percentage": round(overall_pct, 1),
+            "budget_limit": float(overall_budget_dec),
+            "total_spent": float(total_spent_dec),
+            "remaining": float(overall_rem_dec),
+            "percentage": float(overall_pct_dec),
             "status": overall_status,
         },
         "categories": category_budgets,
@@ -132,78 +114,49 @@ def get_budgets():
 @login_required
 def set_budget():
     user_id = get_current_user_id()
-    data = request.get_json() or {}
-
-    category_id = data.get("category_id")  # None or int
-    month = data.get("month")
-    year = data.get("year")
-    amount = data.get("amount")
-
-    # Validation
-    try:
-        month = int(month)
-        year = int(year)
-        if not (1 <= month <= 12) or year < 2020:
-            raise ValueError()
-    except (TypeError, ValueError):
-        return jsonify({"error": "Validation Error", "message": "Invalid month or year."}), 400
+    repo = BudgetRepository()
 
     try:
-        amount_val = float(amount)
-        if amount_val <= 0:
-            raise ValueError()
-    except (TypeError, ValueError):
-        return jsonify({"error": "Validation Error", "message": "Budget amount must be a positive number."}), 400
+        data = get_json_dict()
+        month = parse_int_param(data.get("month"), default=None, min_val=1, max_val=12, required=True, field_name="Month")
+        year = parse_int_param(data.get("year"), default=None, min_val=2020, max_val=2100, required=True, field_name="Year")
+        amount_val = validate_amount(data.get("amount"))
 
-    if category_id:
-        # Validate category exists
-        cat = query_db("SELECT id FROM categories WHERE id = %s;", (category_id,), one=True)
-        if not cat:
-            return jsonify({"error": "Validation Error", "message": "Invalid category."}), 400
-
-    try:
-        # Check if record already exists
-        if category_id is None:
-            existing = query_db(
-                "SELECT id FROM budgets WHERE user_id = %s AND category_id IS NULL AND month = %s AND year = %s;",
-                (user_id, month, year),
-                one=True,
-            )
+        raw_cat = data.get("category_id")
+        if raw_cat is not None and raw_cat != "":
+            category_id = parse_int_param(raw_cat, default=None, min_val=1, field_name="Category ID")
+            if not repo.category_exists(category_id):
+                raise ValueError("Invalid category selected.")
         else:
-            existing = query_db(
-                "SELECT id FROM budgets WHERE user_id = %s AND category_id = %s AND month = %s AND year = %s;",
-                (user_id, category_id, month, year),
-                one=True,
-            )
+            category_id = None
+    except ValueError as ve:
+        return jsonify({"error": "Validation Error", "message": str(ve)}), 400
 
-        if existing:
-            execute_db(
-                "UPDATE budgets SET amount = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s;",
-                (round(amount_val, 2), existing["id"]),
-            )
-            budget_id = existing["id"]
-        else:
-            _, budget_id = execute_db(
-                """
-                INSERT INTO budgets (user_id, category_id, month, year, amount)
-                VALUES (%s, %s, %s, %s, %s);
-                """,
-                (user_id, category_id, month, year, round(amount_val, 2)),
-            )
-
+    # Serialize concurrent budget writes per user across MariaDB and SQL Server
+    try:
+        budget_id = repo.upsert_budget(
+            user_id=user_id,
+            category_id=category_id,
+            month=month,
+            year=year,
+            amount=amount_val,
+        )
         return jsonify({"message": "Budget configured successfully.", "budget_id": budget_id}), 200
-
+    except UserAccountNotFoundError:
+        session.clear()
+        return jsonify({"error": "Unauthorized", "message": "Account session is no longer valid."}), 401
+    except InvalidCategoryError:
+        return jsonify({"error": "Validation Error", "message": "Invalid category selected."}), 400
     except Exception as e:
-        return jsonify({"error": "Database Error", "message": f"Failed to save budget: {str(e)}"}), 500
+        current_app.logger.error(f"DB error setting budget for user {user_id}: {e}")
+        return jsonify({"error": "Database Error", "message": "An error occurred while saving the budget."}), 500
 
 
 @budgets_bp.route("/api/budgets/<int:budget_id>", methods=["DELETE"])
 @login_required
 def delete_budget(budget_id: int):
     user_id = get_current_user_id()
-    rowcount, _ = execute_db("DELETE FROM budgets WHERE id = %s AND user_id = %s;", (budget_id, user_id))
-    if rowcount == 0:
+    if not BudgetRepository().delete_budget(budget_id, user_id):
         return jsonify({"error": "Not Found", "message": "Budget not found or unauthorized."}), 404
 
     return jsonify({"message": "Budget removed successfully."})
-

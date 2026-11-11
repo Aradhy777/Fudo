@@ -115,7 +115,7 @@ class OCRService:
             extracted["message"] = "Text and financial fields extracted successfully. Please review and confirm."
             return extracted
 
-        except Exception as e:
+        except Exception:
             return {
                 "ocr_status": "failed",
                 "raw_text": None,
@@ -123,7 +123,7 @@ class OCRService:
                 "extracted_merchant": None,
                 "extracted_date": None,
                 "extracted_payment_method": None,
-                "message": f"Error during OCR execution: {str(e)}",
+                "message": "OCR engine could not read this screenshot; please enter or verify the details manually.",
             }
 
     @classmethod
@@ -134,11 +134,11 @@ class OCRService:
         """
         # 1. Amount Extraction
         amount = None
-        # Look for currency symbols or keywords followed by number
-        # e.g., "Paid ₹450.00", "Total: Rs. 1,200", "INR 350.50", "Amt: 250"
+        # Prioritize explicit total/paid labels over generic line-item currency markers
         amount_patterns = [
-            r"(?:₹|rs\.?|inr|total|paid|amt|amount)\s*[:\-\s]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)",
-            r"(?:credited|debited)\s+(?:by|for)?\s*(?:₹|rs\.?|inr)?\s*([0-9]+(?:\.[0-9]{1,2})?)",
+            r"(?:grand\s+total|total\s+paid|amount\s+paid|net\s+payable|total|paid|amt|amount)\s*[:\-\s]?\s*(?:₹|rs\.?|inr)?\s*((?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]{1,2})?)",
+            r"(?:₹|rs\.?|inr)\s*[:\-\s]?\s*((?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]{1,2})?)",
+            r"(?:credited|debited)\s+(?:by|for)?\s*(?:₹|rs\.?|inr)?\s*((?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]{1,2})?)",
             r"\b([0-9]+(?:\.[0-9]{2}))\b",
         ]
         for pattern in amount_patterns:
@@ -177,9 +177,7 @@ class OCRService:
                 except Exception:
                     continue
 
-        # Fallback to today's date if no date could be parsed
-        if not extracted_date:
-            extracted_date = datetime.now().strftime("%Y-%m-%d")
+        # Leave date None when no valid date appears in OCR text (never fabricate today's date)
 
         # 3. Merchant Extraction
         merchant = None
@@ -196,7 +194,7 @@ class OCRService:
             if len(candidate) >= 3:
                 merchant = candidate[:50]
 
-        # Check known common student merchants if not matched yet
+        # Match recognizable merchant tokens ONLY when actually present in OCR text
         known_merchants = [
             "Swiggy", "Zomato", "Amazon", "Flipkart", "Uber", "Ola",
             "Starbucks", "Cafe Coffee Day", "Subway", "Domino's", "McDonald's",
@@ -208,11 +206,8 @@ class OCRService:
                     merchant = km
                     break
 
-        if not merchant:
-            merchant = "Unknown Merchant"
-
-        # 4. Payment Method Detection
-        payment_method = "UPI"  # Default in modern student payments
+        # 4. Payment Method Detection (None unless text indicates a payment mode)
+        payment_method = None
         text_lower = text.lower()
         if any(k in text_lower for k in ["upi", "gpay", "google pay", "phonepe", "paytm", "bhim", "vpa"]):
             payment_method = "UPI"

@@ -1,13 +1,17 @@
 """
 ExpenseTrack - Database Connection & Execution Module
-Provides robust, parameterized MySQL connectivity, connection pooling/lifecycle management,
+Provides parameterized MySQL connectivity, safe resource cleanup on exceptions,
 and atomic transaction execution using PyMySQL.
 """
 
+import logging
 import pymysql
 import pymysql.cursors
 from contextlib import contextmanager
 from config import Config
+
+logger = logging.getLogger(__name__)
+
 
 def get_raw_connection(include_db=True):
     """
@@ -30,25 +34,42 @@ def get_raw_connection(include_db=True):
     return pymysql.connect(**kwargs)
 
 
+def _safe_close(cursor, conn):
+    """Guarantee cursor and socket connection closure without masking prior exceptions."""
+    if cursor is not None:
+        try:
+            cursor.close()
+        except Exception:
+            pass
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
 @contextmanager
 def get_db():
     """
     Context manager for database transactions.
-    Automatically rolls back on uncaught exception and closes the connection.
+    Automatically rolls back on uncaught exception and safely closes cursor/connection.
     Yields:
         (conn, cursor)
     """
     conn = get_raw_connection(include_db=True)
-    cursor = conn.cursor()
+    cursor = None
     try:
+        cursor = conn.cursor()
         yield conn, cursor
         conn.commit()
     except Exception:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         raise
     finally:
-        cursor.close()
-        conn.close()
+        _safe_close(cursor, conn)
 
 
 def query_db(sql, params=None, one=False, commit=False):
@@ -57,20 +78,24 @@ def query_db(sql, params=None, one=False, commit=False):
     Prevents SQL injection by enforcing query parameterization.
     """
     conn = get_raw_connection(include_db=True)
+    cursor = None
     try:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, params or ())
-            if commit:
-                conn.commit()
-            if one:
-                return cursor.fetchone()
-            return cursor.fetchall()
+        cursor = conn.cursor()
+        cursor.execute(sql, params or ())
+        if commit:
+            conn.commit()
+        if one:
+            return cursor.fetchone()
+        return cursor.fetchall()
     except Exception:
         if commit:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         raise
     finally:
-        conn.close()
+        _safe_close(cursor, conn)
 
 
 def execute_db(sql, params=None):
@@ -78,33 +103,37 @@ def execute_db(sql, params=None):
     Execute INSERT, UPDATE, or DELETE query and return (rowcount, lastrowid).
     """
     conn = get_raw_connection(include_db=True)
+    cursor = None
     try:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, params or ())
-            conn.commit()
-            return cursor.rowcount, cursor.lastrowid
+        cursor = conn.cursor()
+        cursor.execute(sql, params or ())
+        conn.commit()
+        return cursor.rowcount, cursor.lastrowid
     except Exception:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         raise
     finally:
-        conn.close()
+        _safe_close(cursor, conn)
 
 
 def test_connection():
     """
     Verify if the MySQL database is reachable and operational.
-    Returns (True, None) or (False, error_message).
+    Returns (True, message) or (False, sanitized_message) while logging full details internally.
     """
+    conn = None
+    cursor = None
     try:
         conn = get_raw_connection(include_db=True)
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT 1 AS alive")
-            res = cursor.fetchone()
-        conn.close()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 AS alive")
+        cursor.fetchone()
         return True, "Connected successfully"
-    except pymysql.err.OperationalError as e:
-        code, msg = e.args if len(e.args) >= 2 else (0, str(e))
-        return False, f"MySQL Operational Error ({code}): {msg}"
     except Exception as e:
-        return False, f"Database Connection Error: {str(e)}"
-
+        logger.error("Database connectivity check failed: %s", e)
+        return False, "Database connection failed. Check server logs for details."
+    finally:
+        _safe_close(cursor, conn)

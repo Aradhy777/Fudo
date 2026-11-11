@@ -5,39 +5,39 @@
 
 {% block content %}
 <!-- OCR Status Banner -->
-<div class="card" style="margin-bottom: 24px; background: {% if tesseract_ready %}#ECFDF5{% else %}#FFFBEB{% endif %}; border-color: {% if tesseract_ready %}#A7F3D0{% else %}#FDE68A{% endif %};">
-  <div class="card-body" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+<div class="card ocr-banner {% if tesseract_ready %}ready{% else %}fallback{% endif %}">
+  <div class="ocr-banner-inner">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: {% if tesseract_ready %}#10B981{% else %}#F59E0B{% endif %}; color: white;">
+      <div class="ocr-banner-icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
           <circle cx="12" cy="13" r="3"/>
         </svg>
       </div>
       <div>
-        <h4 style="font-size: 0.95rem; font-weight: 700; color: {% if tesseract_ready %}#065F46{% else %}#92400E{% endif %};">
+        <h4 class="ocr-banner-title">
           {% if tesseract_ready %}
             Tesseract OCR Engine Active
           {% else %}
-            Optical Character Recognition Engine in Resilient Fallback Mode
+            Optical Character Recognition in Fallback Mode
           {% endif %}
         </h4>
-        <p style="font-size: 0.82rem; color: {% if tesseract_ready %}#047857{% else %}#B45309{% endif %};">
+        <p class="ocr-banner-desc">
           {% if tesseract_ready %}
-            Automatic text, amount, date, and merchant recognition enabled. Upload any UPI or card payment screenshot.
+            Automatic text, amount, date, and merchant extraction enabled. Upload any UPI or card payment screenshot.
           {% else %}
-            Tesseract OCR binary is not detected on the system PATH. Receipts are stored securely with SHA-256 verification, and you can confirm or enter details manually below.
+            Tesseract OCR binary is not detected on PATH. Receipts are verified, hashed (SHA-256), and stored securely; confirm or enter transaction details below.
           {% endif %}
         </p>
       </div>
     </div>
     <span class="badge {% if tesseract_ready %}normal{% else %}warning{% endif %}">
-      {% if tesseract_ready %}AI Engine Ready{% else %}Safe Fallback{% endif %}
+      {% if tesseract_ready %}OCR Ready{% else %}Manual Fallback{% endif %}
     </span>
   </div>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" id="scannerGrid">
+<div class="split-grid" id="scannerGrid">
   <!-- Left Column: Upload & Image Preview -->
   <div class="card">
     <div class="card-header">
@@ -58,32 +58,32 @@
       </div>
 
       <!-- Preview Container -->
-      <div id="previewContainer" style="display: none; margin-top: 18px; text-align: center;">
-        <div style="position: relative; display: inline-block; max-width: 100%;">
-          <img id="receiptImagePreview" style="max-height: 340px; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); max-width: 100%; object-fit: contain;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="resetUpload()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9);">
-            Change Image
+      <div id="previewContainer" style="display: none; margin-top: 16px; text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <img id="receiptImagePreview" alt="Uploaded receipt preview" style="max-height: 340px; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); max-width: 100%; object-fit: contain;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="resetUpload()">
+            Choose Different Image
           </button>
         </div>
       </div>
 
       <!-- Processing Spinner -->
-      <div id="processingIndicator" style="display: none; margin-top: 18px; text-align: center; padding: 24px;">
-        <div style="display: inline-block; width: 36px; height: 36px; border: 3px solid #E2E8F0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <p style="margin-top: 10px; font-weight: 600; color: var(--text-main); font-size: 0.92rem;">Analyzing screenshot & running OCR...</p>
-        <p style="font-size: 0.8rem; color: var(--text-muted);">Extracting merchant, transaction amount, date & payment method</p>
+      <div id="processingIndicator" style="display: none; margin-top: 18px; text-align: center; padding: 20px;">
+        <div style="display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="margin-top: 10px; font-weight: 600; color: var(--text-main); font-size: 0.9rem;">Validating image & scanning receipt...</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Checking SHA-256 fingerprint & extracting transaction fields</p>
       </div>
 
       <!-- Duplicate Alert Banner -->
-      <div id="duplicateAlert" style="display: none; margin-top: 16px; padding: 12px 16px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius-md); color: #92400E; font-size: 0.85rem;">
-        ⚠️ <strong>Notice:</strong> This receipt has been uploaded previously based on cryptographic SHA-256 fingerprinting. Please verify to avoid recording duplicate expenses.
+      <div id="duplicateAlert" class="alert-banner" style="display: none; background: var(--warning-subtle); border: 1px solid var(--warning-border); color: var(--warning);">
+        <strong>Duplicate Receipt Notice:</strong> An identical file hash already exists in your uploads. Please confirm you are not recording a duplicate expense.
       </div>
 
       <!-- Raw OCR Text Accordion / Preview -->
       <div id="rawTextContainer" style="display: none; margin-top: 16px;">
-        <details style="font-size: 0.82rem; color: var(--text-muted); background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px;">
+        <details class="raw-ocr-details">
           <summary style="cursor: pointer; font-weight: 600; color: var(--text-main);">View Raw Extracted OCR Text</summary>
-          <pre id="rawTextContent" style="margin-top: 10px; white-space: pre-wrap; word-break: break-all; font-family: monospace; font-size: 0.78rem; background: #FFFFFF; padding: 10px; border-radius: 4px; border: 1px solid #E2E8F0;"></pre>
+          <pre id="rawTextContent" class="raw-ocr-pre"></pre>
         </details>
       </div>
     </div>
@@ -94,9 +94,9 @@
     <div class="card-header">
       <div>
         <h2 class="card-title">Verify & Confirm Expense</h2>
-        <p class="card-subtitle">Review extracted information before writing to MySQL</p>
+        <p class="card-subtitle">Human-in-the-loop review before saving to database</p>
       </div>
-      <span class="badge normal" id="extractionStatusBadge">Awaiting Upload</span>
+      <span class="badge neutral" id="extractionStatusBadge">Awaiting Upload</span>
     </div>
     <div class="card-body">
       <form id="verifyExpenseForm" onsubmit="handleConfirmExpense(event)">
@@ -143,8 +143,11 @@
           <input type="text" id="verifiedNotes" class="form-control" placeholder="e.g. Verified from uploaded receipt">
         </div>
 
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 0.8rem; color: var(--text-muted);">
-          🔒 <strong>Security Policy:</strong> ExpenseTrack never requests or stores UPI PINs, CVVs, OTPs, or financial credentials.
+        <div class="security-notice">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="flex-shrink: 0;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span><strong style="color: var(--text-main);">Security Policy:</strong> ExpenseTrack never requests or stores UPI PINs, CVVs, OTPs, or financial credentials.</span>
         </div>
 
         <button type="submit" class="btn btn-primary" id="confirmExpenseBtn" style="width: 100%; padding: 12px;" disabled>
@@ -159,15 +162,9 @@
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
-  @media (max-width: 900px) {
-    #scannerGrid {
-      grid-template-columns: 1fr;
-    }
-  }
 </style>
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/scan.js') }}"></script>
 {% endblock %}
-

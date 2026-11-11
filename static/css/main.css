@@ -61,7 +61,7 @@
   --shadow-lg: 0 20px 35px -5px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
   --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.12);
 
-  --mesh-opacity: 0.12;
+  --mesh-opacity: 0.05;
 }
 
 /* Modern Platinum Theme (Light Mode) */
@@ -69,7 +69,7 @@
   --bg-app: #F8FAFC;
   --bg-surface: #FFFFFF;
   --bg-surface-elevated: #F1F5F9;
-  --bg-surface-glass: rgba(255, 255, 255, 0.88);
+  --bg-surface-glass: rgba(255, 255, 255, 0.92);
   --border-color: #E2E8F0;
   --border-hover: #CBD5E1;
   --border-focus: #10B981;
@@ -80,19 +80,19 @@
 
   --primary: #10B981;
   --primary-hover: #059669;
-  --primary-glow: rgba(16, 185, 129, 0.18);
+  --primary-glow: rgba(16, 185, 129, 0.14);
   --primary-subtle: #ECFDF5;
   --primary-border: #A7F3D0;
 
-  --danger: #EF4444;
+  --danger: #DC2626;
   --danger-subtle: #FEF2F2;
   --danger-border: #FECACA;
 
-  --warning: #F59E0B;
+  --warning: #D97706;
   --warning-subtle: #FFFBEB;
   --warning-border: #FDE68A;
 
-  --info: #3B82F6;
+  --info: #2563EB;
   --info-subtle: #EFF6FF;
   --info-border: #BFDBFE;
 
@@ -101,15 +101,15 @@
   --sidebar-text: #94A3B8;
   --sidebar-text-hover: #FFFFFF;
   --sidebar-active-bg: rgba(16, 185, 129, 0.14);
-  --sidebar-active-text: #10B981;
+  --sidebar-active-text: #34D399;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(226, 232, 240, 0.8);
-  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
-  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(226, 232, 240, 0.9);
+  --shadow-md: 0 6px 14px -3px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 14px 24px -5px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 20px 40px -12px rgba(0, 0, 0, 0.22);
 
-  --mesh-opacity: 0.05;
+  --mesh-opacity: 0.02;
 }
 
 *, *::before, *::after {
@@ -197,15 +197,15 @@ body {
 }
 
 .brand-icon {
-  width: 38px;
-  height: 38px;
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  border-radius: var(--radius-md);
+  width: 36px;
+  height: 36px;
+  background: #059669;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #FFFFFF;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  flex-shrink: 0;
 }
 
 .brand-text {
@@ -279,7 +279,6 @@ body {
   width: 3px;
   background: #10B981;
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 10px #10B981;
 }
 
 .nav-icon {
@@ -359,6 +358,8 @@ body {
 /* Main Area */
 .app-main {
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
@@ -418,6 +419,7 @@ body {
 .content-container {
   padding: 32px 36px;
   max-width: 1440px;
+  min-width: 0;
   margin: 0 auto;
   width: 100%;
 }
@@ -425,10 +427,50 @@ body {
 .mobile-nav-toggle {
   display: none;
   background: none;
-  border: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   color: var(--text-main);
   cursor: pointer;
-  padding: 8px;
+  padding: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-close-btn {
+  display: none;
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-xs);
+}
+
+.mobile-close-btn:hover {
+  color: #FFFFFF;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.65);
+  z-index: 35;
+  backdrop-filter: blur(2px);
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+@media (max-width: 1180px) {
+  .content-container {
+    padding: 24px 24px;
+  }
+  .app-header {
+    padding: 0 24px;
+  }
 }
 
 @media (max-width: 960px) {
@@ -438,16 +480,36 @@ body {
   .app-sidebar.open {
     transform: translateX(0);
   }
+  .mobile-close-btn {
+    display: inline-flex;
+  }
   .app-main {
     margin-left: 0;
   }
   .mobile-nav-toggle {
-    display: block;
+    display: inline-flex;
   }
   .content-container {
     padding: 20px 16px;
   }
   .app-header {
-    padding: 0 16px;
+    height: auto;
+    min-height: 64px;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .header-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-title {
+    font-size: 1.12rem;
+  }
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

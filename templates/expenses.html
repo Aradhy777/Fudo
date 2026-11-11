@@ -8,39 +8,41 @@
 <div class="card" style="margin-bottom: 20px;">
   <div class="card-body" style="padding: 18px 24px;">
     <form id="filterForm" onsubmit="handleFilterSubmit(event)">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) 120px 100px; gap: 12px; align-items: flex-end;">
+      <div class="filter-grid">
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="font-size: 0.78rem;">Search Merchant / Notes</label>
+          <label class="form-label" for="filterSearch" style="font-size: 0.78rem;">Search Merchant / Notes</label>
           <input type="text" id="filterSearch" class="form-control" placeholder="Search keyword...">
         </div>
 
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="font-size: 0.78rem;">Category</label>
+          <label class="form-label" for="filterCategory" style="font-size: 0.78rem;">Category</label>
           <select id="filterCategory" class="form-control">
             <option value="">All Categories</option>
           </select>
         </div>
 
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="font-size: 0.78rem;">From Date</label>
+          <label class="form-label" for="filterStartDate" style="font-size: 0.78rem;">From Date</label>
           <input type="date" id="filterStartDate" class="form-control">
         </div>
 
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="font-size: 0.78rem;">To Date</label>
+          <label class="form-label" for="filterEndDate" style="font-size: 0.78rem;">To Date</label>
           <input type="date" id="filterEndDate" class="form-control">
         </div>
 
-        <button type="submit" class="btn btn-primary" style="height: 42px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-          </svg>
-          Filter
-        </button>
+        <div class="toolbar-row" style="gap: 8px;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Filter
+          </button>
 
-        <button type="button" class="btn btn-secondary" onclick="resetFilters()" style="height: 42px;">
-          Reset
-        </button>
+          <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+            Reset
+          </button>
+        </div>
       </div>
     </form>
   </div>
@@ -51,7 +53,7 @@
   <div class="card-header">
     <div>
       <h2 class="card-title">Recorded Expenses</h2>
-      <p class="card-subtitle" id="tableRecordSummary">Showing records from MySQL database</p>
+      <p class="card-subtitle" id="tableRecordSummary">Showing records from database</p>
     </div>
     <div style="display: flex; gap: 8px;">
       <a href="/scan" class="btn btn-secondary btn-sm">
@@ -88,7 +90,7 @@
         <tbody id="expensesTableBody">
           <tr>
             <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
-              Loading expenses from MySQL...
+              Loading expenses...
             </td>
           </tr>
         </tbody>
@@ -106,9 +108,9 @@
     </div>
 
     <!-- Pagination Footer -->
-    <div style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;" id="paginationBar">
+    <div class="pagination-bar" id="paginationBar">
       <span style="font-size: 0.85rem; color: var(--text-muted);" id="paginationInfo">Page 1 of 1</span>
-      <div style="display: flex; gap: 8px;">
+      <div class="toolbar-row" style="gap: 8px;">
         <button class="btn btn-secondary btn-sm" id="btnPrevPage" onclick="changePage(-1)" disabled>Previous</button>
         <button class="btn btn-secondary btn-sm" id="btnNextPage" onclick="changePage(1)" disabled>Next</button>
       </div>
@@ -170,6 +172,29 @@
         <button type="submit" class="btn btn-primary" id="editSaveBtn">Save Changes</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-backdrop" id="deleteConfirmModal">
+  <div class="modal-dialog" style="max-width: 420px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Delete Expense</h3>
+      <button type="button" class="modal-close" onclick="closeModal('deleteConfirmModal')" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="deleteExpenseId">
+      <p style="font-size: 0.92rem; color: var(--text-main); line-height: 1.5; margin-bottom: 8px;">
+        Permanently delete <strong id="deleteExpenseDesc">this expense</strong>?
+      </p>
+      <p style="font-size: 0.82rem; color: var(--text-muted);">
+        This action removes the record from the database and updates your monthly budget and dashboard totals immediately.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('deleteConfirmModal')">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDeleteExpense()">Delete Expense</button>
+    </div>
   </div>
 </div>
 {% endblock %}

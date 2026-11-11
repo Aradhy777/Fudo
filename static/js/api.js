@@ -85,9 +85,10 @@ function showToast(message, type = "success") {
 
   toast.innerHTML = `
     ${iconSvg}
-    <div style="flex: 1; font-size: 0.88rem; font-weight: 600; color: var(--text-main, #FFFFFF); line-height: 1.4;">${message}</div>
+    <div class="toast-msg" style="flex: 1; font-size: 0.88rem; font-weight: 600; color: var(--text-main, #FFFFFF); line-height: 1.4;"></div>
     <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--text-muted, #94A3B8);cursor:pointer;font-size:1.1rem;line-height:1;padding:0 4px;" aria-label="Close notification">&times;</button>
   `;
+  toast.querySelector(".toast-msg").textContent = String(message || "");
 
   container.appendChild(toast);
   setTimeout(() => {
@@ -98,16 +99,51 @@ function showToast(message, type = "success") {
   }, 4000);
 }
 
-// Modal Helpers
+// Modal Helpers with Accessibility (Escape key & Backdrop dismissal)
 function openModal(id) {
   const el = document.getElementById(id);
-  if (el) el.classList.add("active");
+  if (el) {
+    el.classList.add("active");
+    const firstInput = el.querySelector("input:not([type='hidden']), select, textarea");
+    if (firstInput) {
+      setTimeout(() => firstInput.focus(), 50);
+    }
+  }
 }
 
 function closeModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove("active");
 }
+
+function toggleMobileSidebar() {
+  const sb = document.getElementById("appSidebar");
+  const ov = document.getElementById("sidebarOverlay");
+  if (!sb) return;
+  const opening = !sb.classList.contains("open");
+  sb.classList.toggle("open", opening);
+  if (ov) ov.classList.toggle("active", opening);
+}
+
+function closeMobileSidebar() {
+  const sb = document.getElementById("appSidebar");
+  const ov = document.getElementById("sidebarOverlay");
+  if (sb) sb.classList.remove("open");
+  if (ov) ov.classList.remove("active");
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document.querySelectorAll(".modal-backdrop.active").forEach(m => m.classList.remove("active"));
+    closeMobileSidebar();
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (e.target.classList && e.target.classList.contains("modal-backdrop")) {
+    e.target.classList.remove("active");
+  }
+});
 
 // Format Currency
 function formatCurrency(amount) {

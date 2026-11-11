@@ -16,8 +16,13 @@ function initDashboardControls() {
   const now = new Date();
   const mSelect = document.getElementById("dashMonthSelect");
   const ySelect = document.getElementById("dashYearSelect");
-  if (mSelect && !mSelect.value) mSelect.value = now.getMonth() + 1;
-  if (ySelect && !ySelect.value) ySelect.value = now.getFullYear();
+  if (mSelect) mSelect.value = String(now.getMonth() + 1);
+  if (ySelect) {
+    const curYear = String(now.getFullYear());
+    if ([...ySelect.options].some(opt => opt.value === curYear)) {
+      ySelect.value = curYear;
+    }
+  }
 }
 
 function handleDashboardMonthChange() {
@@ -74,17 +79,11 @@ function updatePulseBanner(data) {
   if (data.monthly_budget > 0) {
     statusText.textContent = `${usedPct}% Budget Used`;
     if (usedPct >= 100) {
-      statusDot.className = "pulse-chip-dot amber";
-      statusDot.style.background = "#EF4444";
-      statusDot.style.boxShadow = "0 0 10px #EF4444";
+      statusDot.className = "pulse-chip-dot danger";
     } else if (usedPct >= 80) {
       statusDot.className = "pulse-chip-dot amber";
-      statusDot.style.background = "#F59E0B";
-      statusDot.style.boxShadow = "0 0 10px #F59E0B";
     } else {
       statusDot.className = "pulse-chip-dot green";
-      statusDot.style.background = "#10B981";
-      statusDot.style.boxShadow = "0 0 10px #10B981";
     }
   } else {
     statusText.textContent = "No Budget Configured";
@@ -130,8 +129,8 @@ function updateKpiCards(data) {
   }
 
   const spendFill = document.getElementById("kpiSpendFill");
-  if (spendFill && data.monthly_budget > 0) {
-    spendFill.style.width = `${Math.min(100, data.budget_used_percentage)}%`;
+  if (spendFill) {
+    spendFill.style.width = data.monthly_budget > 0 ? `${Math.min(100, data.budget_used_percentage)}%` : "0%";
   }
 
   // Metric 2: Monthly Budget Cap
@@ -170,18 +169,32 @@ function updateKpiCards(data) {
       remainingCard.className = "stat-card card-accent-amber";
       remainingCard.style.borderTopColor = "#F59E0B";
       remainingWrapper.className = "stat-icon-wrapper amber";
+      remainingWrapper.style.background = "";
+      remainingWrapper.style.color = "";
       if (remainingFill) {
         remainingFill.style.background = "#F59E0B";
-        remainingFill.style.width = `${100 - usedPct}%`;
+        remainingFill.style.width = `${Math.max(0, 100 - usedPct)}%`;
       }
     } else {
       remainingCard.className = "stat-card card-accent-emerald";
       remainingCard.style.borderTopColor = "#10B981";
       remainingWrapper.className = "stat-icon-wrapper emerald";
+      remainingWrapper.style.background = "";
+      remainingWrapper.style.color = "";
       if (remainingFill) {
         remainingFill.style.background = "#10B981";
-        remainingFill.style.width = `${100 - usedPct}%`;
+        remainingFill.style.width = `${Math.max(0, 100 - usedPct)}%`;
       }
+    }
+  } else {
+    remainingCard.className = "stat-card card-accent-amber";
+    remainingCard.style.borderTopColor = "";
+    remainingWrapper.className = "stat-icon-wrapper amber";
+    remainingWrapper.style.background = "";
+    remainingWrapper.style.color = "";
+    if (remainingFill) {
+      remainingFill.style.background = "#F59E0B";
+      remainingFill.style.width = "0%";
     }
   }
 

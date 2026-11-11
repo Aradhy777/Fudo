@@ -4,10 +4,13 @@ Handles secure receipt uploads to Azure Blob Storage with seamless local fallbac
 when Azure credentials are not configured.
 """
 
+import logging
 import os
 import uuid
 from pathlib import Path
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 try:
     from azure.storage.blob import BlobServiceClient, ContentSettings
@@ -60,9 +63,9 @@ class AzureStorageService:
                     "file_path": blob_client.url,
                     "azure_blob_url": blob_client.url,
                 }
-            except Exception as e:
-                # Log Azure error and gracefully fall back to local disk
-                print(f"[!] Azure Blob upload failed, falling back to local storage: {e}")
+            except Exception:
+                # Log Azure fallback safely without printing connection details
+                logger.warning("Azure Blob upload unavailable; falling back to local receipt storage.")
 
         # 2. Local File System Storage (Fallback or default development mode)
         upload_dir = Path(Config.UPLOAD_FOLDER)

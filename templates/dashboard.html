@@ -4,31 +4,22 @@
 {% block page_title %}Financial Overview{% endblock %}
 
 {% block header_actions %}
-<div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+<div class="toolbar-row">
   <!-- Month & Year Selector -->
-  <div style="display: flex; gap: 6px; align-items: center;">
-    <select id="dashMonthSelect" class="form-control" style="width: 130px; height: 38px; font-weight: 700; font-size: 0.85rem;" onchange="handleDashboardMonthChange()">
-      <option value="1">January</option>
-      <option value="2">February</option>
-      <option value="3">March</option>
-      <option value="4">April</option>
-      <option value="5">May</option>
-      <option value="6">June</option>
-      <option value="7">July</option>
-      <option value="8">August</option>
-      <option value="9">September</option>
-      <option value="10" selected>October</option>
-      <option value="11">November</option>
-      <option value="12">December</option>
+  <div class="toolbar-row" style="gap: 6px;">
+    <select id="dashMonthSelect" class="form-control header-select-month" onchange="handleDashboardMonthChange()" aria-label="Select Dashboard Month">
+      {% for m_num, m_name in [(1,'January'),(2,'February'),(3,'March'),(4,'April'),(5,'May'),(6,'June'),(7,'July'),(8,'August'),(9,'September'),(10,'October'),(11,'November'),(12,'December')] %}
+      <option value="{{ m_num }}" {% if m_num == current_month %}selected{% endif %}>{{ m_name }}</option>
+      {% endfor %}
     </select>
-    <select id="dashYearSelect" class="form-control" style="width: 92px; height: 38px; font-weight: 700; font-size: 0.85rem;" onchange="handleDashboardMonthChange()">
-      <option value="2025">2025</option>
-      <option value="2026" selected>2026</option>
-      <option value="2027">2027</option>
+    <select id="dashYearSelect" class="form-control header-select-year" onchange="handleDashboardMonthChange()" aria-label="Select Dashboard Year">
+      {% for yr in available_years %}
+      <option value="{{ yr }}" {% if yr == current_year %}selected{% endif %}>{{ yr }}</option>
+      {% endfor %}
     </select>
   </div>
 
-  <a href="/scan" class="btn btn-secondary btn-sm" style="height: 38px;">
+  <a href="/scan" class="btn btn-secondary btn-sm">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
       <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
       <circle cx="12" cy="13" r="3"/>
@@ -36,7 +27,7 @@
     Scan Receipt
   </a>
 
-  <button class="btn btn-primary btn-sm" onclick="openQuickAddExpense()" style="height: 38px;">
+  <button class="btn btn-primary btn-sm" onclick="openQuickAddExpense()">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
       <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
     </svg>
@@ -49,21 +40,21 @@
 <!-- 1. Architectural Command Strip (Financial Pulse) -->
 <div class="pulse-banner">
   <div>
-    <div class="pulse-greeting" id="pulseGreeting">Financial Pulse: October 2026</div>
-    <div class="pulse-sub" id="pulseSub">Tracking student expenditures and live budget pacing for October 2026</div>
+    <div class="pulse-greeting" id="pulseGreeting">Financial Pulse</div>
+    <div class="pulse-sub" id="pulseSub">Loading monthly budget pacing and expense metrics...</div>
   </div>
   <div class="pulse-chips">
     <div class="pulse-chip" id="pulseStatusChip">
       <span class="pulse-chip-dot green" id="pulseStatusDot"></span>
-      <span id="pulseStatusText">70.6% Budget Used</span>
+      <span id="pulseStatusText">Loading...</span>
     </div>
     <div class="pulse-chip">
       <span class="pulse-chip-dot amber"></span>
-      <span id="pulseDailyAllowance">Safe Daily: ₹1,471/day</span>
+      <span id="pulseDailyAllowance">Safe Daily: --</span>
     </div>
     <div class="pulse-chip">
       <span class="pulse-chip-dot purple"></span>
-      <span id="pulseTopCategory">Top: Food (40.4%)</span>
+      <span id="pulseTopCategory">Top: --</span>
     </div>
   </div>
 </div>
@@ -82,7 +73,7 @@
     </div>
     <div class="stat-value" id="kpiTotalSpent">₹0.00</div>
     <div class="stat-caption" style="display: flex; justify-content: space-between; align-items: center;">
-      <span id="kpiMonthLabel">October 2026</span>
+      <span id="kpiMonthLabel">--</span>
       <span class="trend-badge neutral" id="kpiMoMBadge">0% vs prior</span>
     </div>
     <div class="stat-micro-progress">
@@ -212,11 +203,11 @@
   <div class="card-header">
     <div>
       <h2 class="card-title">Recent Transactions</h2>
-      <p class="card-subtitle">Real-time ledger entries from MySQL database</p>
+      <p class="card-subtitle">Real-time ledger entries from your database</p>
     </div>
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <input type="text" id="quickTableSearch" class="form-control" placeholder="Quick search merchant..." style="width: 200px; height: 34px; font-size: 0.82rem;" oninput="filterRecentTable(this.value)">
-      <a href="/expenses" class="btn btn-secondary btn-sm" style="height: 34px;">Full Ledger &rarr;</a>
+    <div class="toolbar-row">
+      <input type="text" id="quickTableSearch" class="form-control" placeholder="Quick search merchant..." style="width: 200px; max-width: 100%; height: 36px; font-size: 0.82rem;" oninput="filterRecentTable(this.value)" aria-label="Quick search recent transactions">
+      <a href="/expenses" class="btn btn-secondary btn-sm">Full Ledger &rarr;</a>
     </div>
   </div>
   <div class="card-body" style="padding: 0;">
@@ -235,7 +226,7 @@
         <tbody id="recentTransactionsBody">
           <tr>
             <td colspan="6" style="text-align: center; padding: 36px; color: var(--text-muted);">
-              Loading transactions from MySQL...
+              Loading transactions...
             </td>
           </tr>
         </tbody>

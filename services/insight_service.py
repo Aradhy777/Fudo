@@ -1,201 +1,169 @@
 """
 ExpenseTrack - Rule-Based Financial Insights Service (AI-900 / Rule-Based Expert System)
 Derives actionable, student-centric financial recommendations strictly from factual MySQL data.
+Uses pure Decimal arithmetic internally for financial precision.
 """
 
 from calendar import monthrange
 from datetime import datetime
-from database.db import query_db
+from decimal import Decimal, ROUND_HALF_UP
+from repositories.analytics_repo import AnalyticsRepository
+from routes.validators import (
+    ZERO_DEC,
+    CENT_QUANT,
+    TENTH_QUANT,
+    HUNDRED_DEC,
+    date_range_for_month,
+    subtract_months,
+    to_decimal,
+)
 
 
 class InsightService:
     @classmethod
     def get_monthly_insights(cls, user_id: int, month: int, year: int) -> dict:
         """
-        Analyze user spending patterns and produce explainable recommendations.
+        Analyze user spending patterns and produce explainable recommendations
+        using a single database connection, sargable range queries, and Decimal arithmetic.
         """
         now = datetime.now()
         _, total_days_in_month = monthrange(year, month)
         current_day = now.day if (now.year == year and now.month == month) else total_days_in_month
         days_remaining = max(1, total_days_in_month - current_day)
 
-        # 1. Total spending this month
-        total_spending_row = query_db(
-            """
-            SELECT COALESCE(SUM(amount), 0.00) AS total_spent,
-                   COUNT(id) AS transaction_count
-            FROM expenses
-            WHERE user_id = %s
-              AND MONTH(expense_date) = %s
-              AND YEAR(expense_date) = %s;
-            """,
-            (user_id, month, year),
-            one=True,
+        cur_start, cur_end = date_range_for_month(year, month)
+        prev_year, prev_month = subtract_months(year, month, 1)
+        prev_start, prev_end = date_range_for_month(prev_year, prev_month)
+
+        insights_data = AnalyticsRepository().get_monthly_insights_data(
+            user_id,
+            month=month,
+            year=year,
+            start_date=cur_start,
+            end_date=cur_end,
+            prev_start=prev_start,
+            prev_end=prev_end,
         )
-        total_spent = float(total_spending_row["total_spent"])
-        transaction_count = int(total_spending_row["transaction_count"])
+        total_spending_row = insights_data["total_spending_row"]
+        overall_budget_row = insights_data["overall_budget_row"]
+        category_spending = insights_data["category_spending"]
+        category_budgets = insights_data["category_budgets"]
+        prev_spending_row = insights_data["prev_spending_row"]
 
-        # 2. Monthly Budget (overall budget has category_id IS NULL)
-        overall_budget_row = query_db(
-            """
-            SELECT amount
-            FROM budgets
-            WHERE user_id = %s
-              AND category_id IS NULL
-              AND month = %s
-              AND year = %s;
-            """,
-            (user_id, month, year),
-            one=True,
+        total_spent_dec = to_decimal(total_spending_row["total_spent"]) if total_spending_row else ZERO_DEC
+        transaction_count = int(total_spending_row["transaction_count"]) if total_spending_row else 0
+        overall_budget_dec = to_decimal(overall_budget_row["amount"]) if overall_budget_row else ZERO_DEC
+        prev_spent_dec = to_decimal(prev_spending_row["prev_spent"]) if prev_spending_row else ZERO_DEC
+
+        budget_util_dec = (
+            (total_spent_dec / overall_budget_dec * HUNDRED_DEC).quantize(TENTH_QUANT, rounding=ROUND_HALF_UP)
+            if overall_budget_dec > ZERO_DEC
+            else Decimal("0.0")
         )
-        overall_budget = float(overall_budget_row["amount"]) if overall_budget_row else 0.00
-
-        # 3. Category-wise Spending
-        category_spending = query_db(
-            """
-            SELECT c.id, c.name, c.color, c.icon,
-                   COALESCE(SUM(e.amount), 0.00) AS category_spent,
-                   COUNT(e.id) AS tx_count
-            FROM categories c
-            LEFT JOIN expenses e
-                   ON c.id = e.category_id
-                  AND e.user_id = %s
-                  AND MONTH(e.expense_date) = %s
-                  AND YEAR(e.expense_date) = %s
-            GROUP BY c.id, c.name, c.color, c.icon
-            HAVING category_spent > 0
-            ORDER BY category_spent DESC;
-            """,
-            (user_id, month, year),
+        remaining_budget_dec = max(ZERO_DEC, overall_budget_dec - total_spent_dec) if overall_budget_dec > ZERO_DEC else ZERO_DEC
+        safe_daily_dec = (
+            (remaining_budget_dec / Decimal(days_remaining)).quantize(CENT_QUANT, rounding=ROUND_HALF_UP)
+            if overall_budget_dec > ZERO_DEC
+            else ZERO_DEC
         )
+        avg_daily_burn_dec = (total_spent_dec / Decimal(max(1, current_day))).quantize(CENT_QUANT, rounding=ROUND_HALF_UP)
 
-        # 4. Category-wise Budgets & Threshold Checks
-        category_budgets = query_db(
-            """
-            SELECT b.category_id, c.name AS category_name, b.amount AS budget_amount,
-                   COALESCE(SUM(e.amount), 0.00) AS spent_amount
-            FROM budgets b
-            JOIN categories c ON b.category_id = c.id
-            LEFT JOIN expenses e
-                   ON e.category_id = b.category_id
-                  AND e.user_id = b.user_id
-                  AND MONTH(e.expense_date) = b.month
-                  AND YEAR(e.expense_date) = b.year
-            WHERE b.user_id = %s
-              AND b.month = %s
-              AND b.year = %s
-              AND b.category_id IS NOT NULL
-            GROUP BY b.category_id, c.name, b.amount;
-            """,
-            (user_id, month, year),
-        )
-
-        # 5. Prior Month Comparison
-        prev_month = 12 if month == 1 else month - 1
-        prev_year = year - 1 if month == 1 else year
-        prev_spending_row = query_db(
-            """
-            SELECT COALESCE(SUM(amount), 0.00) AS prev_spent
-            FROM expenses
-            WHERE user_id = %s
-              AND MONTH(expense_date) = %s
-              AND YEAR(expense_date) = %s;
-            """,
-            (user_id, prev_month, prev_year),
-            one=True,
-        )
-        prev_spent = float(prev_spending_row["prev_spent"])
-
-        # Calculations
-        budget_utilization = (total_spent / overall_budget * 100) if overall_budget > 0 else 0
-        remaining_budget = max(0.00, overall_budget - total_spent) if overall_budget > 0 else 0.00
-        safe_daily_allowance = round(remaining_budget / days_remaining, 2) if overall_budget > 0 else 0.00
-        avg_daily_burn = round(total_spent / max(1, current_day), 2)
-
-        # Generate Rule-Based Explanations & Advice
         recommendations = []
-        highest_category = category_spending[0] if category_spending else None
+        raw_top = category_spending[0] if category_spending else None
+        highest_category = {
+            "id": raw_top["id"],
+            "name": raw_top["name"],
+            "color": raw_top["color"],
+            "icon": raw_top["icon"],
+            "category_spent": float(to_decimal(raw_top["category_spent"])),
+            "tx_count": int(raw_top["tx_count"]),
+        } if raw_top else None
 
         # Rule 1: Overall Budget Exhaustion & Thresholds
-        if overall_budget > 0:
-            if total_spent > overall_budget:
-                overage = round(total_spent - overall_budget, 2)
+        if overall_budget_dec > ZERO_DEC:
+            if total_spent_dec > overall_budget_dec:
+                overage_dec = (total_spent_dec - overall_budget_dec).quantize(CENT_QUANT, rounding=ROUND_HALF_UP)
                 recommendations.append({
                     "type": "danger",
                     "title": "Monthly Budget Exceeded",
-                    "text": f"You have exceeded your overall monthly budget by ₹{overage:,.2f} ({budget_utilization:.1f}% used). Pause non-essential discretionary purchases immediately.",
+                    "text": f"You have exceeded your overall monthly budget by ₹{overage_dec:,.2f} ({budget_util_dec:.1f}% used). Pause non-essential discretionary purchases immediately.",
                 })
-            elif budget_utilization >= 80.0:
+            elif budget_util_dec >= Decimal("80.0"):
                 recommendations.append({
                     "type": "warning",
                     "title": "High Budget Utilization (80%+ Alert)",
-                    "text": f"You have consumed {budget_utilization:.1f}% of your monthly budget with {days_remaining} days remaining. Cap daily spending at ₹{safe_daily_allowance:,.2f} to stay within limits.",
+                    "text": f"You have consumed {budget_util_dec:.1f}% of your monthly budget with {days_remaining} days remaining. Cap daily spending at ₹{safe_daily_dec:,.2f} to stay within limits.",
                 })
             else:
                 recommendations.append({
                     "type": "success",
                     "title": "Healthy Budget Pace",
-                    "text": f"Your spending is well within budget ({budget_utilization:.1f}% utilized). Your safe daily spending allowance is ₹{safe_daily_allowance:,.2f}.",
+                    "text": f"Your spending is well within budget ({budget_util_dec:.1f}% utilized). Your safe daily spending allowance is ₹{safe_daily_dec:,.2f}.",
                 })
 
         # Rule 2: Dominant Category Spending
-        if highest_category and total_spent > 0:
-            cat_share = (float(highest_category["category_spent"]) / total_spent) * 100
-            if cat_share >= 35.0:
+        if highest_category and total_spent_dec > ZERO_DEC:
+            top_amt_dec = to_decimal(highest_category["category_spent"])
+            cat_share_dec = (top_amt_dec / total_spent_dec * HUNDRED_DEC).quantize(TENTH_QUANT, rounding=ROUND_HALF_UP)
+            if cat_share_dec >= Decimal("35.0"):
                 cat_name = highest_category["name"]
-                amt = float(highest_category["category_spent"])
                 advice = "Consider college meal plans or bulk purchases" if cat_name == "Food" else "Audit regular subscriptions and unplanned purchases"
                 recommendations.append({
                     "type": "info",
                     "title": f"Dominant Category: {cat_name}",
-                    "text": f"{cat_name} represents {cat_share:.1f}% (₹{amt:,.2f}) of your total expenses this month. {advice} to free up cash flow.",
+                    "text": f"{cat_name} represents {cat_share_dec:.1f}% (₹{top_amt_dec:,.2f}) of your total expenses this month. {advice} to free up cash flow.",
                 })
 
         # Rule 3: Category Limit Breaches
         for cb in category_budgets:
-            c_spent = float(cb["spent_amount"])
-            c_limit = float(cb["budget_amount"])
+            c_spent_dec = to_decimal(cb["spent_amount"])
+            c_limit_dec = to_decimal(cb["budget_amount"])
             c_name = cb["category_name"]
-            c_pct = (c_spent / c_limit * 100) if c_limit > 0 else 0
-            if c_spent > c_limit:
+            if c_spent_dec > c_limit_dec:
                 recommendations.append({
                     "type": "warning",
                     "title": f"Category Limit Breached: {c_name}",
-                    "text": f"Spending on {c_name} (₹{c_spent:,.2f}) has exceeded its set category budget of ₹{c_limit:,.2f}.",
+                    "text": f"Spending on {c_name} (₹{c_spent_dec:,.2f}) has exceeded its set category budget of ₹{c_limit_dec:,.2f}.",
                 })
 
         # Rule 4: Burn Rate Warning
-        if overall_budget > 0 and days_remaining > 5 and avg_daily_burn > safe_daily_allowance * 1.3:
+        if overall_budget_dec > ZERO_DEC and days_remaining > 5 and avg_daily_burn_dec > (safe_daily_dec * Decimal("1.3")):
             recommendations.append({
                 "type": "warning",
                 "title": "Fast Daily Burn Rate",
-                "text": f"Your average daily spending (₹{avg_daily_burn:,.2f}/day) exceeds the recommended allowance of ₹{safe_daily_allowance:,.2f}/day. At this rate, your budget will run out before month end.",
+                "text": f"Your average daily spending (₹{avg_daily_burn_dec:,.2f}/day) exceeds the recommended allowance of ₹{safe_daily_dec:,.2f}/day. At this rate, your budget will run out before month end.",
             })
+
+        mom_change_dec = (
+            ((total_spent_dec - prev_spent_dec) / prev_spent_dec * HUNDRED_DEC).quantize(TENTH_QUANT, rounding=ROUND_HALF_UP)
+            if prev_spent_dec > ZERO_DEC
+            else Decimal("0.0")
+        )
 
         return {
             "month": month,
             "year": year,
-            "total_spent": total_spent,
-            "overall_budget": overall_budget,
-            "remaining_budget": remaining_budget,
-            "budget_utilization": round(budget_utilization, 1),
-            "safe_daily_allowance": safe_daily_allowance,
-            "avg_daily_burn": avg_daily_burn,
+            "total_spent": float(total_spent_dec),
+            "overall_budget": float(overall_budget_dec),
+            "remaining_budget": float(remaining_budget_dec),
+            "budget_utilization": float(budget_util_dec),
+            "safe_daily_allowance": float(safe_daily_dec),
+            "avg_daily_burn": float(avg_daily_burn_dec),
             "days_remaining": days_remaining,
             "transaction_count": transaction_count,
             "highest_category": highest_category,
             "category_spending": [
                 {
                     "name": c["name"],
-                    "amount": float(c["category_spent"]),
+                    "amount": float(to_decimal(c["category_spent"])),
                     "color": c["color"],
                     "icon": c["icon"],
-                    "share": round((float(c["category_spent"]) / total_spent * 100), 1) if total_spent > 0 else 0,
+                    "share": float((to_decimal(c["category_spent"]) / total_spent_dec * HUNDRED_DEC).quantize(TENTH_QUANT, rounding=ROUND_HALF_UP))
+                    if total_spent_dec > ZERO_DEC else 0.0,
                 }
                 for c in category_spending
             ],
-            "prev_spent": prev_spent,
-            "month_over_month_change": round(((total_spent - prev_spent) / prev_spent * 100), 1) if prev_spent > 0 else 0.0,
+            "prev_spent": float(prev_spent_dec),
+            "month_over_month_change": float(mom_change_dec),
             "recommendations": recommendations,
         }
-

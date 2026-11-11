@@ -4,29 +4,20 @@
 {% block page_title %}Budget Planning & Limits{% endblock %}
 
 {% block header_actions %}
-<div style="display: flex; gap: 10px; align-items: center;">
-  <select id="budgetMonthSelect" class="form-control" style="width: 140px; height: 38px;" onchange="loadBudgets()">
-    <option value="1">January</option>
-    <option value="2">February</option>
-    <option value="3">March</option>
-    <option value="4">April</option>
-    <option value="5">May</option>
-    <option value="6">June</option>
-    <option value="7">July</option>
-    <option value="8">August</option>
-    <option value="9">September</option>
-    <option value="10">October</option>
-    <option value="11">November</option>
-    <option value="12">December</option>
+<div class="toolbar-row">
+  <select id="budgetMonthSelect" class="form-control header-select-month" onchange="loadBudgets()" aria-label="Select Budget Month">
+    {% for m_num, m_name in [(1,'January'),(2,'February'),(3,'March'),(4,'April'),(5,'May'),(6,'June'),(7,'July'),(8,'August'),(9,'September'),(10,'October'),(11,'November'),(12,'December')] %}
+    <option value="{{ m_num }}" {% if m_num == current_month %}selected{% endif %}>{{ m_name }}</option>
+    {% endfor %}
   </select>
 
-  <select id="budgetYearSelect" class="form-control" style="width: 100px; height: 38px;" onchange="loadBudgets()">
-    <option value="2025">2025</option>
-    <option value="2026" selected>2026</option>
-    <option value="2027">2027</option>
+  <select id="budgetYearSelect" class="form-control header-select-year" onchange="loadBudgets()" aria-label="Select Budget Year">
+    {% for yr in available_years %}
+    <option value="{{ yr }}" {% if yr == current_year %}selected{% endif %}>{{ yr }}</option>
+    {% endfor %}
   </select>
 
-  <button class="btn btn-primary btn-sm" onclick="openBudgetModal(null, 'Overall Monthly Budget', 0)">
+  <button class="btn btn-primary btn-sm" onclick="openOverallBudgetModal()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 5v14M5 12h14"/>
     </svg>
@@ -37,30 +28,30 @@
 
 {% block content %}
 <!-- Overall Monthly Budget Overview Card -->
-<div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 28px;">
+<div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 24px;">
   <div class="card-header">
     <div>
       <h2 class="card-title">Overall Monthly Limit</h2>
       <p class="card-subtitle" id="overallMonthSubtitle">Total spending allocation for selected month</p>
     </div>
     <div id="overallStatusBadge">
-      <span class="badge normal">Active</span>
+      <span class="badge neutral">Loading</span>
     </div>
   </div>
 
   <div class="card-body">
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+    <div class="budget-summary-grid">
       <div>
-        <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Budget Limit</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main);" id="overallLimitVal">₹0.00</div>
+        <div class="budget-metric-label">Budget Limit</div>
+        <div class="budget-metric-value" id="overallLimitVal">₹0.00</div>
       </div>
       <div>
-        <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Current Spending</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #1E293B;" id="overallSpentVal">₹0.00</div>
+        <div class="budget-metric-label">Current Spending</div>
+        <div class="budget-metric-value" id="overallSpentVal">₹0.00</div>
       </div>
       <div>
-        <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Remaining Balance</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #059669;" id="overallRemainingVal">₹0.00</div>
+        <div class="budget-metric-label" id="overallRemainingLabel">Remaining Balance</div>
+        <div class="budget-metric-value success" id="overallRemainingVal">₹0.00</div>
       </div>
       <div style="display: flex; align-items: center; justify-content: flex-end;">
         <button class="btn btn-secondary btn-sm" onclick="openOverallBudgetModal()">
@@ -70,7 +61,7 @@
     </div>
 
     <!-- Progress Bar -->
-    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">
+    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">
       <span>Budget Utilization</span>
       <span id="overallPercentageLabel">0%</span>
     </div>
@@ -79,16 +70,14 @@
     </div>
 
     <!-- Threshold Warning Banner -->
-    <div id="overallThresholdAlert" style="display: none; margin-top: 14px; padding: 12px 16px; border-radius: var(--radius-md); font-size: 0.86rem; font-weight: 500;"></div>
+    <div id="overallThresholdAlert" class="alert-banner" style="display: none;"></div>
   </div>
 </div>
 
 <!-- Category Budgets Section -->
-<div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
-  <div>
-    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Category-Specific Spending Limits</h3>
-    <p style="font-size: 0.84rem; color: var(--text-muted);">Set individual spending caps for Food, Travel, Books, and Entertainment</p>
-  </div>
+<div style="margin-bottom: 16px;">
+  <h3 style="font-size: 1.12rem; font-weight: 700; color: var(--text-main);">Category-Specific Spending Limits</h3>
+  <p style="font-size: 0.84rem; color: var(--text-muted);">Set individual monthly caps per category with real-time 80% caution and 100% alert thresholds</p>
 </div>
 
 <div class="stats-grid" id="categoryBudgetsGrid">
@@ -97,28 +86,34 @@
   </div>
 </div>
 
-<!-- Set / Edit Budget Modal -->
+<!-- Set / Edit / Remove Budget Modal -->
 <div class="modal-backdrop" id="budgetModal">
   <div class="modal-dialog">
     <div class="modal-header">
       <h3 class="modal-title" id="budgetModalTitle">Set Budget Limit</h3>
-      <button class="modal-close" onclick="closeModal('budgetModal')">&times;</button>
+      <button type="button" class="modal-close" onclick="closeModal('budgetModal')" aria-label="Close modal">&times;</button>
     </div>
     <form id="budgetForm" onsubmit="handleSaveBudget(event)">
       <input type="hidden" id="budgetCategoryId">
+      <input type="hidden" id="budgetRecordId">
       <div class="modal-body">
         <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;" id="budgetModalDesc">
           Define spending cap for this category.
         </p>
 
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label" for="budgetAmount">Monthly Limit (₹) *</label>
-          <input type="number" step="1" min="1" id="budgetAmount" class="form-control" placeholder="e.g. 3500" required autofocus>
+          <input type="number" step="0.01" min="0.01" id="budgetAmount" class="form-control" placeholder="e.g. 3500" required autofocus>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('budgetModal')">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="budgetSaveBtn">Save Limit</button>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-danger btn-sm" id="budgetDeleteBtn" onclick="handleDeleteBudget()" style="display: none;">
+          Remove Limit
+        </button>
+        <div class="toolbar-row" style="margin-left: auto; gap: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('budgetModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="budgetSaveBtn">Save Limit</button>
+        </div>
       </div>
     </form>
   </div>
@@ -128,4 +123,3 @@
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/budgets.js') }}"></script>
 {% endblock %}
-

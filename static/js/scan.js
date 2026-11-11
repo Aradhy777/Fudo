@@ -78,6 +78,7 @@ async function uploadAndScanReceipt(file) {
   badge.textContent = "Processing OCR...";
   badge.className = "badge warning";
   duplicateAlert.style.display = "none";
+  document.getElementById("verifiedReceiptId").value = "";
   confirmBtn.disabled = true;
 
   const formData = new FormData();
@@ -140,7 +141,7 @@ async function uploadAndScanReceipt(file) {
     showToast(err.message || "Failed to scan receipt.", "error");
     badge.textContent = "Scan Failed";
     badge.className = "badge exceeded";
-    confirmBtn.disabled = false;
+    confirmBtn.disabled = true;
   } finally {
     indicator.style.display = "none";
   }
@@ -184,7 +185,7 @@ function resetUpload() {
   document.getElementById("duplicateAlert").style.display = "none";
   document.getElementById("rawTextContainer").style.display = "none";
   document.getElementById("extractionStatusBadge").textContent = "Awaiting Upload";
-  document.getElementById("extractionStatusBadge").className = "badge normal";
+  document.getElementById("extractionStatusBadge").className = "badge neutral";
   document.getElementById("confirmExpenseBtn").disabled = true;
   document.getElementById("verifiedDate").value = new Date().toISOString().split("T")[0];
 }
@@ -192,8 +193,9 @@ function resetUpload() {
 async function handleConfirmExpense(e) {
   e.preventDefault();
   const btn = document.getElementById("confirmExpenseBtn");
+  if (btn.disabled) return;
   btn.disabled = true;
-  btn.textContent = "Writing to MySQL Database...";
+  btn.textContent = "Saving Expense...";
 
   const receiptIdVal = document.getElementById("verifiedReceiptId").value;
   const payload = {
@@ -208,7 +210,7 @@ async function handleConfirmExpense(e) {
 
   try {
     await API.post("/api/expenses", payload);
-    showToast("Receipt verified and expense saved to MySQL!", "success");
+    showToast("Receipt verified and expense saved!", "success");
     setTimeout(() => {
       window.location.href = "/expenses";
     }, 600);

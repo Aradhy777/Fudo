@@ -4,7 +4,7 @@
 {% block page_title %}Profile & System Diagnostics{% endblock %}
 
 {% block content %}
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" id="profileGrid">
+<div class="split-grid" id="profileGrid">
   <!-- Left Column: User Profile & Security Settings -->
   <div>
     <!-- Profile Info Card -->
@@ -19,7 +19,7 @@
         <form id="profileForm" onsubmit="handleUpdateProfile(event)">
           <div class="form-group">
             <label class="form-label" for="profUsername">Username</label>
-            <input type="text" id="profUsername" class="form-control" disabled style="background: #F1F5F9; color: #64748B;">
+            <input type="text" id="profUsername" class="form-control input-readonly" disabled>
           </div>
 
           <div class="form-group">
@@ -71,7 +71,7 @@
           <h2 class="card-title">Academic System Architecture & Diagnostics</h2>
           <p class="card-subtitle">Live health check for DP-900, AI-900, RDBMS & Cloud Security</p>
         </div>
-        <button class="btn btn-secondary btn-sm" onclick="fetchDiagnostics()">Refresh</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fetchDiagnostics()">Refresh</button>
       </div>
       <div class="card-body" id="diagnosticsBody">
         <div style="text-align: center; padding: 24px; color: var(--text-muted);">
@@ -81,14 +81,6 @@
     </div>
   </div>
 </div>
-
-<style>
-  @media (max-width: 900px) {
-    #profileGrid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -108,15 +100,25 @@
   async function handleUpdateProfile(e) {
     e.preventDefault();
     const btn = document.getElementById("saveProfBtn");
+    if (btn.disabled) return;
     btn.disabled = true;
     btn.textContent = "Saving...";
 
+    const fullName = document.getElementById("profFullName").value.trim();
+    const email = document.getElementById("profEmail").value.trim();
+
     try {
       await API.post("/api/profile/update", {
-        full_name: document.getElementById("profFullName").value.trim(),
-        email: document.getElementById("profEmail").value.trim(),
+        full_name: fullName,
+        email: email,
       });
       showToast("Profile updated successfully!", "success");
+
+      // Sync sidebar profile widget cleanly
+      const nameEl = document.querySelector(".user-name");
+      const avatarEl = document.querySelector(".user-avatar");
+      if (nameEl && fullName) nameEl.textContent = fullName;
+      if (avatarEl && fullName) avatarEl.textContent = fullName.substring(0, 1).toUpperCase();
     } catch (err) {
       showToast(err.message || "Failed to update profile", "error");
     } finally {
@@ -128,6 +130,7 @@
   async function handleChangePassword(e) {
     e.preventDefault();
     const btn = document.getElementById("changePassBtn");
+    if (btn.disabled) return;
     btn.disabled = true;
     btn.textContent = "Updating...";
 
@@ -146,66 +149,83 @@
     }
   }
 
+  function escapeDiagHtml(text) {
+    if (text === null || text === undefined) return "";
+    const div = document.createElement("div");
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
   async function fetchDiagnostics() {
     const container = document.getElementById("diagnosticsBody");
     try {
       const d = await API.get("/api/system/diagnostics");
       container.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <!-- MySQL / RDBMS Status -->
-          <div style="padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: #F8FAFC;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-weight: 700; color: #0F172A; font-size: 0.92rem;">🗄️ Relational Database (RDBMS)</span>
-              <span class="badge ${d.database.status === 'connected' ? 'normal' : 'exceeded'}">${d.database.status}</span>
+        <div class="diag-stack">
+          <div class="diag-card">
+            <div class="diag-card-header">
+              <span class="diag-card-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                Relational Database (RDBMS)
+              </span>
+              <span class="badge ${d.database.status === 'connected' ? 'normal' : 'exceeded'}">${escapeDiagHtml(d.database.status)}</span>
             </div>
-            <div style="font-size: 0.82rem; color: #475569; line-height: 1.4;">
-              <strong>Engine:</strong> ${d.database.engine}<br>
-              <strong>Host:</strong> ${d.database.host}:${d.database.port}<br>
-              <strong>Database:</strong> ${d.database.database_name}<br>
-              <span style="color: #10B981;">✓ Normalized schema, foreign keys & transactions</span>
-            </div>
-          </div>
-
-          <!-- Azure Cloud / DP-900 Status -->
-          <div style="padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: #F8FAFC;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-weight: 700; color: #0F172A; font-size: 0.92rem;">☁️ Cloud Storage (DP-900 Architecture)</span>
-              <span class="badge ${d.cloud_storage.status === 'connected' ? 'normal' : 'warning'}">${d.cloud_storage.status}</span>
-            </div>
-            <div style="font-size: 0.82rem; color: #475569; line-height: 1.4;">
-              <strong>Provider:</strong> ${d.cloud_storage.provider}<br>
-              <strong>Target Container:</strong> ${d.cloud_storage.container}<br>
-              <strong>Status:</strong> ${d.cloud_storage.message}
+            <div class="diag-card-body">
+              <strong>Engine:</strong> ${escapeDiagHtml(d.database.engine)}<br>
+              <strong>Host:</strong> ${escapeDiagHtml(d.database.host)}:${escapeDiagHtml(d.database.port)}<br>
+              <strong>Database:</strong> ${escapeDiagHtml(d.database.database_name)}<br>
+              <span style="color: var(--primary); font-weight: 600;">Normalized 3NF schema, foreign keys & ACID transactions</span>
             </div>
           </div>
 
-          <!-- AI-900 / OCR Engine Status -->
-          <div style="padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: #F8FAFC;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-weight: 700; color: #0F172A; font-size: 0.92rem;">👁️ Vision & OCR (AI-900 Architecture)</span>
-              <span class="badge ${d.ocr_engine.status === 'ready' ? 'normal' : 'warning'}">${d.ocr_engine.status}</span>
+          <div class="diag-card">
+            <div class="diag-card-header">
+              <span class="diag-card-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                Cloud Storage (DP-900 Architecture)
+              </span>
+              <span class="badge ${d.cloud_storage.status === 'connected' ? 'normal' : 'warning'}">${escapeDiagHtml(d.cloud_storage.status)}</span>
             </div>
-            <div style="font-size: 0.82rem; color: #475569; line-height: 1.4;">
-              <strong>Engine:</strong> ${d.ocr_engine.name}<br>
-              <strong>Binary:</strong> ${d.ocr_engine.binary_path}<br>
+            <div class="diag-card-body">
+              <strong>Provider:</strong> ${escapeDiagHtml(d.cloud_storage.provider)}<br>
+              <strong>Target Container:</strong> ${escapeDiagHtml(d.cloud_storage.container)}<br>
+              <strong>Status:</strong> ${escapeDiagHtml(d.cloud_storage.message)}
+            </div>
+          </div>
+
+          <div class="diag-card">
+            <div class="diag-card-header">
+              <span class="diag-card-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                Vision & OCR (AI-900 Architecture)
+              </span>
+              <span class="badge ${d.ocr_engine.status === 'ready' ? 'normal' : 'warning'}">${escapeDiagHtml(d.ocr_engine.status)}</span>
+            </div>
+            <div class="diag-card-body">
+              <strong>Engine:</strong> ${escapeDiagHtml(d.ocr_engine.name)}<br>
+              <strong>Binary:</strong> ${escapeDiagHtml(d.ocr_engine.binary_path)}<br>
               <strong>Rule Engine:</strong> Heuristic currency, date & merchant extraction
             </div>
           </div>
 
-          <!-- Cloud Security Compliance -->
-          <div style="padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: #F8FAFC;">
-            <div style="font-weight: 700; color: #0F172A; font-size: 0.92rem; margin-bottom: 6px;">🛡️ Cloud Security & Protection</div>
-            <ul style="font-size: 0.82rem; color: #475569; padding-left: 18px; line-height: 1.5;">
-              <li><strong>Password Hashing:</strong> ${d.security.password_algorithm}</li>
-              <li><strong>Session Cookies:</strong> ${d.security.session_protection}</li>
-              <li><strong>SQL Injection:</strong> ${d.security.sql_injection_defense}</li>
-              <li><strong>Multi-Tenancy:</strong> ${d.security.user_isolation}</li>
+          <div class="diag-card">
+            <div class="diag-card-header">
+              <span class="diag-card-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Cloud Security & Protection
+              </span>
+            </div>
+            <ul class="diag-list">
+              <li><strong>Password Hashing:</strong> ${escapeDiagHtml(d.security.password_algorithm)}</li>
+              <li><strong>Session Cookies:</strong> ${escapeDiagHtml(d.security.session_protection)}</li>
+              <li><strong>SQL Injection:</strong> ${escapeDiagHtml(d.security.sql_injection_defense)}</li>
+              <li><strong>Multi-Tenancy:</strong> ${escapeDiagHtml(d.security.user_isolation)}</li>
             </ul>
           </div>
         </div>
       `;
     } catch (err) {
-      container.innerHTML = `<div style="color:#EF4444;font-size:0.88rem;">Failed to fetch diagnostics: ${err.message}</div>`;
+      container.innerHTML = `<div style="color:var(--danger);font-size:0.88rem;">Failed to fetch diagnostics: ${escapeDiagHtml(err.message)}</div>`;
     }
   }
 
@@ -215,4 +235,3 @@
   });
 </script>
 {% endblock %}
-

@@ -58,6 +58,10 @@ async function fetchExpenses(page = 1) {
       `Showing ${expenses.length} of ${pagination.total_records} recorded expenses`;
 
     if (expenses.length === 0) {
+      if (currentPage > 1 && pagination.total_records > 0) {
+        fetchExpenses(currentPage - 1);
+        return;
+      }
       table.style.display = "none";
       emptyState.style.display = "block";
       paginationBar.style.display = "none";
@@ -68,19 +72,27 @@ async function fetchExpenses(page = 1) {
     emptyState.style.display = "none";
     paginationBar.style.display = "flex";
 
-    tbody.innerHTML = expenses.map(e => `
+    tbody.innerHTML = expenses.map(e => {
+      const mLower = (e.payment_method || "").toLowerCase().replace(/\s+/g, "");
+      let methodClass = "other";
+      if (mLower.includes("upi")) methodClass = "upi";
+      else if (mLower.includes("cash")) methodClass = "cash";
+      else if (mLower.includes("card")) methodClass = "card";
+      else if (mLower.includes("bank") || mLower.includes("net")) methodClass = "netbanking";
+
+      return `
       <tr>
-        <td style="color: #64748B; font-size: 0.84rem; white-space: nowrap;">${e.expense_date}</td>
-        <td style="font-weight: 600; color: #1E293B;">${escapeHtml(e.merchant)}</td>
+        <td style="color: var(--text-muted); font-size: 0.84rem; white-space: nowrap; font-weight: 600;">${e.expense_date}</td>
+        <td style="font-weight: 700; color: var(--text-main);">${escapeHtml(e.merchant)}</td>
         <td>
           <span class="category-pill" style="background: ${e.category.color}18; color: ${e.category.color};">
             ${escapeHtml(e.category.name)}
           </span>
         </td>
         <td>
-          <span class="badge" style="background: #F1F5F9; color: #475569;">${escapeHtml(e.payment_method)}</span>
+          <span class="method-pill ${methodClass}">${escapeHtml(e.payment_method)}</span>
         </td>
-        <td style="color: #64748B; font-size: 0.84rem;">${escapeHtml(e.notes || "-")}</td>
+        <td style="color: var(--text-muted); font-size: 0.84rem;">${escapeHtml(e.notes || "-")}</td>
         <td>
           ${e.receipt ? `
             <a href="${e.receipt.azure_blob_url || ('/uploads/receipts/' + e.receipt.file_name)}" target="_blank" 
@@ -91,25 +103,26 @@ async function fetchExpenses(page = 1) {
               </svg>
               Receipt
             </a>
-          ` : `<span style="color:#CBD5E1; font-size:0.8rem;">None</span>`}
+          ` : `<span style="color: var(--text-subtle); font-size:0.8rem;">None</span>`}
         </td>
-        <td style="text-align: right; font-weight: 700; color: #0F172A; font-variant-numeric: tabular-nums;">
+        <td style="text-align: right; font-weight: 800; color: var(--text-main); font-variant-numeric: tabular-nums;">
           ${formatCurrency(e.amount)}
         </td>
-        <td style="text-align: center;">
-          <button class="btn-icon" title="Edit" onclick="openEditModal(${e.id})">
+        <td class="actions-cell">
+          <button class="btn-icon" title="Edit Expense" onclick="openEditModal(${e.id})" aria-label="Edit Expense">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
             </svg>
           </button>
-          <button class="btn-icon danger" title="Delete" onclick="deleteExpenseItem(${e.id})">
+          <button class="btn-icon danger" title="Delete Expense" onclick="openDeleteModal(${e.id}, '${escapeHtml(e.merchant)}', ${e.amount})" aria-label="Delete Expense">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
             </svg>
           </button>
         </td>
       </tr>
-    `).join("");
+    `;
+    }).join("");
 
     // Update Pagination UI
     document.getElementById("paginationInfo").textContent = `Page ${currentPage} of ${totalPages}`;
@@ -161,6 +174,7 @@ async function handleUpdateExpense(e) {
   e.preventDefault();
   const id = document.getElementById("editExpenseId").value;
   const btn = document.getElementById("editSaveBtn");
+  if (btn.disabled) return;
   btn.disabled = true;
   btn.textContent = "Saving...";
 
@@ -186,17 +200,35 @@ async function handleUpdateExpense(e) {
   }
 }
 
-async function deleteExpenseItem(id) {
-  if (!confirm("Are you sure you want to permanently delete this expense record?")) {
-    return;
-  }
+function openDeleteModal(id, merchant, amount) {
+  document.getElementById("deleteExpenseId").value = id;
+  const label = merchant ? `${merchant} (${formatCurrency(amount)})` : "this expense";
+  document.getElementById("deleteExpenseDesc").textContent = label;
+  openModal("deleteConfirmModal");
+}
+
+async function confirmDeleteExpense() {
+  const id = document.getElementById("deleteExpenseId").value;
+  const btn = document.getElementById("confirmDeleteBtn");
+  if (!id || btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = "Deleting...";
+
   try {
     await API.delete(`/api/expenses/${id}`);
     showToast("Expense deleted successfully.", "success");
+    closeModal("deleteConfirmModal");
     fetchExpenses(currentPage);
   } catch (err) {
     showToast(err.message || "Failed to delete expense.", "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Delete Expense";
   }
+}
+
+async function deleteExpenseItem(id) {
+  openDeleteModal(id, "", 0);
 }
 
 function escapeHtml(text) {

@@ -95,11 +95,17 @@ def initialize_database():
         n_schema = execute_sql_file(conn, schema_file)
         print(f"[+] Schema created successfully ({n_schema} statements executed).")
 
-        # 3. Execute seed.sql
-        seed_file = PROJECT_ROOT / "database" / "seed.sql"
-        print(f"[*] Seeding initial data from: {seed_file.name}...")
-        n_seed = execute_sql_file(conn, seed_file)
-        print(f"[+] Seed data inserted successfully ({n_seed} statements executed).")
+        # 3. Execute seed.sql only in non-production (or explicit opt-in)
+        skip_demo = "--schema-only" in sys.argv
+        if Config.is_production() and not Config.ALLOW_DEMO_SEED:
+            print("[!] Production environment detected: skipping demo seed data (seed.sql).")
+        elif skip_demo:
+            print("[*] --schema-only specified: skipping demo seed data.")
+        else:
+            seed_file = PROJECT_ROOT / "database" / "seed.sql"
+            print(f"[*] Seeding initial development data from: {seed_file.name}...")
+            n_seed = execute_sql_file(conn, seed_file)
+            print(f"[+] Development seed data inserted ({n_seed} statements executed).")
 
         # 4. Verification Check
         with conn.cursor() as cursor:

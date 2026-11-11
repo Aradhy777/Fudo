@@ -24,9 +24,9 @@ python database/init_db.py
 ```
 
 ### Step 3: Run Automated Test Suite
-Run the 12 automated test cases covering authentication, expense CRUD, multi-tenant isolation, negative input validation, budgets, and OCR parsing:
+Run the 43 automated pytest cases covering authentication, expense CRUD, multi-tenant isolation, Decimal financial precision, barrier concurrency, production config guards, EXPLAIN index verification, live HTTP smoke verification, and OCR parsing:
 ```bash
-python -m pytest tests/
+python -m pytest -v
 ```
 
 ### Step 4: Launch Web Application
@@ -144,9 +144,10 @@ d:\3rd sem project\
 │   ├── dashboard.py            # Aggregate metrics, Chart.js feeds, recent list
 │   ├── expenses.py             # Expense CRUD, multi-criteria filters, pagination
 │   ├── budgets.py              # Overall & category monthly budgets, 80% warnings
-│   ├── receipts.py             # Receipt upload, SHA-256 duplicate check, OCR
+│   ├── receipts.py             # Receipt upload, SHA-256 duplicate check, magic-byte check, OCR
 │   ├── insights.py             # Rule-based spending analytics & advice
-│   └── profile.py              # Profile settings & live system diagnostics
+│   ├── profile.py              # Profile settings & live system diagnostics
+│   └── validators.py           # Strict boundary validators & sliding-window rate limiter
 ├── services/
 │   ├── ocr_service.py          # Tesseract OCR & heuristic financial parser
 │   ├── insight_service.py      # Spending analytics & explainable advice
@@ -172,14 +173,22 @@ d:\3rd sem project\
 │   ├── insights.html           # Financial recommendations & burn rate
 │   └── profile.html            # Profile & system architecture diagnostics
 ├── tests/
-│   ├── test_app.py             # Pytest suite for auth, CRUD, isolation, budgets
-│   ├── test_ocr.py             # Unit tests for OCR entity extraction & hashing
-│   └── test_live_server.py     # Live HTTP verification script across all 8 routes
+│   ├── test_app.py             # Core Pytest suite (19 tests: auth, CRUD, isolation, budgets)
+│   ├── test_advanced.py        # Stress/concurrency/security/Decimal/release suite (19 tests)
+│   ├── test_ocr.py             # Unit tests for OCR entity extraction & hashing (4 tests)
+│   └── test_live_server.py     # Live HTTP verification script across all 8 routes (1 test)
 └── docs/
     ├── SYSTEM_DESIGN.md        # Architecture, requirements, Mermaid diagrams
     ├── RDBMS.md                # 3NF schema, joins, aggregates, transactions
     ├── DP900_AZURE.md          # Azure SQL & Azure Blob Storage architecture
     ├── CLOUD_SECURITY.md       # Defense-in-depth, Scrypt, OWASP compliance
-    └── AI900_VISION.md         # Computer vision, OCR pipeline, Responsible AI
+    ├── AI900_VISION.md         # Computer vision, OCR pipeline, Responsible AI
+    ├── ENGINEERING_AUDIT.md    # Baseline 12-issue engineering & DB audit
+    ├── SECURITY_AUDIT.md       # OWASP security hardening verification
+    ├── IMPROVEMENT_REPORT.md   # First sprint changelog & test results
+    ├── ADVANCED_TEST_REPORT.md # Stress testing, concurrency, EXPLAIN & security report
+    ├── RELEASE_READINESS_REPORT.md # Final independent backend release-readiness verdict
+    ├── UI_UX_AUDIT_REPORT.md   # UI/UX design system, page refinements & responsive audit
+    └── FINAL_DEMO_CHECKLIST.md # End-to-end validation summary & viva demo checklist
 ```
 
