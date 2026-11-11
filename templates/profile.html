@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Profile & System Architecture – ExpenseTrack{% endblock %}
+{% block page_title %}Profile & System Diagnostics{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" id="profileGrid">
+  <!-- Left Column: User Profile & Security Settings -->
+  <div>
+    <!-- Profile Info Card -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Student Profile Details</h2>
+          <p class="card-subtitle">Manage personal account credentials</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <form id="profileForm" onsubmit="handleUpdateProfile(event)">
+          <div class="form-group">
+            <label class="form-label" for="profUsername">Username</label>
+            <input type="text" id="profUsername" class="form-control" disabled style="background: #F1F5F9; color: #64748B;">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profFullName">Full Name *</label>
+            <input type="text" id="profFullName" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profEmail">Email Address *</label>
+            <input type="email" id="profEmail" class="form-control" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="saveProfBtn">Save Profile Changes</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Password Change Card -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Change Password</h2>
+          <p class="card-subtitle">Update your account authentication credentials</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <form id="passwordForm" onsubmit="handleChangePassword(event)">
+          <div class="form-group">
+            <label class="form-label" for="oldPassword">Current Password *</label>
+            <input type="password" id="oldPassword" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="newPassword">New Password (Min. 8 characters) *</label>
+            <input type="password" id="newPassword" class="form-control" minlength="8" required>
+          </div>
+
+          <button type="submit" class="btn btn-secondary" id="changePassBtn">Update Password</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Academic Evaluation & System Architecture Diagnostics -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Academic System Architecture & Diagnostics</h2>
+          <p class="card-subtitle">Live health check for DP-900, AI-900, RDBMS & Cloud Security</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="fetchDiagnostics()">Refresh</button>
+      </div>
+      <div class="card-body" id="diagnosticsBody">
+        <div style="text-align: center; padding: 24px; color: var(--text-muted);">
+          Querying system diagnostics...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @media (max-width: 900px) {
+    #profileGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  async function loadProfile() {
+    try {
+      const res = await API.get("/api/auth/me");
+      const u = res.user;
+      document.getElementById("profUsername").value = u.username;
+      document.getElementById("profFullName").value = u.full_name;
+      document.getElementById("profEmail").value = u.email;
+    } catch (err) {
+      showToast("Failed to load profile: " + err.message, "error");
+    }
+  }
+
+  async function handleUpdateProfile(e) {
+    e.preventDefault();
+    const btn = document.getElementById("saveProfBtn");
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+
+    try {
+      await API.post("/api/profile/update", {
+        full_name: document.getElementById("profFullName").value.trim(),
+        email: document.getElementById("profEmail").value.trim(),
+      });
+      showToast("Profile updated successfully!", "success");
+    } catch (err) {
+      showToast(err.message || "Failed to update profile", "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Save Profile Changes";
+    }
+  }
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    const btn = document.getElementById("changePassBtn");
+    btn.disabled = true;
+    btn.textContent = "Updating...";
+
+    try {
+      await API.post("/api/profile/change-password", {
+        old_password: document.getElementById("oldPassword").value,
+        new_password: document.getElementById("newPassword").value,
+      });
+      showToast("Password updated successfully!", "success");
+      document.getElementById("passwordForm").reset();
+    } catch (err) {
+      showToast(err.message || "Failed to change password", "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Update Password";
+    }
+  }
+
+  async function fetchDiagnostics() {
+    const container = document.getElementById("diagnosticsBody");
+    try {
+      const d = await API.get("/api/system/diagnostics");
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- MySQL / RDBMS Status -->
+          <div style="padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: #F8FAFC;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 700; color: #0F172A; font-size: 0.92rem;">🗄️ Relational Database (RDBMS)</span>
+              <span class="badge ${d.database.status === 'connected' ? 'normal' : 'exceeded'}">${d.database.status}</span>
+            </div>
+            <div style="font-size: 0.82rem; color: #475569; line-height: 1.4;">
+              <strong>Engine:</strong> ${d.database.engine}<br>
+              <strong>Host:</strong> ${d.database.host}:${d.database.port}<br>
+              <strong>Database:</strong> ${d.database.database_name}<br>
+              <span style="color: #10B981;">✓ Normalized schema, foreign keys & transactions</span>
+            </div>
+          </div>
+
+          <!-- Azure Cloud / DP-900 Status -->
+          <div style="padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: #F8FAFC;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 700; color: #0F172A; font-size: 0.92rem;">☁️ Cloud Storage (DP-900 Architecture)</span>
+              <span class="badge ${d.cloud_storage.status === 'connected' ? 'normal' : 'warning'}">${d.cloud_storage.status}</span>
+            </div>
+            <div style="font-size: 0.82rem; color: #475569; line-height: 1.4;">
+              <strong>Provider:</strong> ${d.cloud_storage.provider}<br>
+              <strong>Target Container:</strong> ${d.cloud_storage.container}<br>
+              <strong>Status:</strong> ${d.cloud_storage.message}
+            </div>
+          </div>
+
+          <!-- AI-900 / OCR Engine Status -->
+          <div style="padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: #F8FAFC;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 700; color: #0F172A; font-size: 0.92rem;">👁️ Vision & OCR (AI-900 Architecture)</span>
+              <span class="badge ${d.ocr_engine.status === 'ready' ? 'normal' : 'warning'}">${d.ocr_engine.status}</span>
+            </div>
+            <div style="font-size: 0.82rem; color: #475569; line-height: 1.4;">
+              <strong>Engine:</strong> ${d.ocr_engine.name}<br>
+              <strong>Binary:</strong> ${d.ocr_engine.binary_path}<br>
+              <strong>Rule Engine:</strong> Heuristic currency, date & merchant extraction
+            </div>
+          </div>
+
+          <!-- Cloud Security Compliance -->
+          <div style="padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: #F8FAFC;">
+            <div style="font-weight: 700; color: #0F172A; font-size: 0.92rem; margin-bottom: 6px;">🛡️ Cloud Security & Protection</div>
+            <ul style="font-size: 0.82rem; color: #475569; padding-left: 18px; line-height: 1.5;">
+              <li><strong>Password Hashing:</strong> ${d.security.password_algorithm}</li>
+              <li><strong>Session Cookies:</strong> ${d.security.session_protection}</li>
+              <li><strong>SQL Injection:</strong> ${d.security.sql_injection_defense}</li>
+              <li><strong>Multi-Tenancy:</strong> ${d.security.user_isolation}</li>
+            </ul>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      container.innerHTML = `<div style="color:#EF4444;font-size:0.88rem;">Failed to fetch diagnostics: ${err.message}</div>`;
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadProfile();
+    fetchDiagnostics();
+  });
+</script>
+{% endblock %}
+

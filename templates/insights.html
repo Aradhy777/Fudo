@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Spending Insights – ExpenseTrack{% endblock %}
+{% block page_title %}Rule-Based Spending Insights & Analytics{% endblock %}
+
+{% block header_actions %}
+<div style="display: flex; gap: 10px; align-items: center;">
+  <select id="insightsMonthSelect" class="form-control" style="width: 140px; height: 38px;" onchange="loadInsights()">
+    <option value="1">January</option>
+    <option value="2">February</option>
+    <option value="3">March</option>
+    <option value="4">April</option>
+    <option value="5">May</option>
+    <option value="6">June</option>
+    <option value="7">July</option>
+    <option value="8">August</option>
+    <option value="9">September</option>
+    <option value="10">October</option>
+    <option value="11">November</option>
+    <option value="12">December</option>
+  </select>
+
+  <select id="insightsYearSelect" class="form-control" style="width: 100px; height: 38px;" onchange="loadInsights()">
+    <option value="2025">2025</option>
+    <option value="2026" selected>2026</option>
+    <option value="2027">2027</option>
+  </select>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Student Financial Health KPI Banner -->
+<div class="stats-grid">
+  <!-- Safe Daily Allowance -->
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Safe Daily Allowance</span>
+      <div class="stat-icon-wrapper emerald">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+        </svg>
+      </div>
+    </div>
+    <div class="stat-value" id="insDailyAllowance">₹0.00 / day</div>
+    <div class="stat-caption">
+      <span id="insDaysRemaining">Remaining for current cycle</span>
+    </div>
+  </div>
+
+  <!-- Highest Spending Category -->
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Top Expense Driver</span>
+      <div class="stat-icon-wrapper amber">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </div>
+    </div>
+    <div class="stat-value" id="insTopCategory">-</div>
+    <div class="stat-caption">
+      <span id="insTopCategoryShare">0% of total expenditure</span>
+    </div>
+  </div>
+
+  <!-- Burn Rate Velocity -->
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Average Daily Spend</span>
+      <div class="stat-icon-wrapper blue">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+        </svg>
+      </div>
+    </div>
+    <div class="stat-value" id="insDailyBurn">₹0.00 / day</div>
+    <div class="stat-caption">
+      <span id="insMoMChange">0% vs prior month</span>
+    </div>
+  </div>
+
+  <!-- Budget Utilization -->
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Budget Used</span>
+      <div class="stat-icon-wrapper purple">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/>
+        </svg>
+      </div>
+    </div>
+    <div class="stat-value" id="insBudgetUtil">0%</div>
+    <div class="stat-caption">
+      <span id="insRemainingBudget">₹0.00 remaining</span>
+    </div>
+  </div>
+</div>
+
+<!-- Rule-Based Advice & Recommendations -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Explainable Budget Advice</h2>
+      <p class="card-subtitle">Deterministic rule-based recommendations generated directly from MySQL records</p>
+    </div>
+    <span class="badge normal">Factual Analysis</span>
+  </div>
+  <div class="card-body" id="recommendationsContainer">
+    <div style="text-align: center; padding: 24px; color: var(--text-muted);">
+      Analyzing spending records...
+    </div>
+  </div>
+</div>
+
+<!-- Category Distribution Table -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Category Spending Distribution</h2>
+      <p class="card-subtitle">Detailed breakdown of expense share and impact on student allowance</p>
+    </div>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Expenditure</th>
+            <th>Share of Total</th>
+            <th>Progress Bar</th>
+          </tr>
+        </thead>
+        <tbody id="categoryDistributionBody">
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
+              Loading category metrics...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/insights.js') }}"></script>
+{% endblock %}
+

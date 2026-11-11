@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Smart Receipt Scan – ExpenseTrack{% endblock %}
+{% block page_title %}Smart Screenshot OCR Scanner{% endblock %}
+
+{% block content %}
+<!-- OCR Status Banner -->
+<div class="card" style="margin-bottom: 24px; background: {% if tesseract_ready %}#ECFDF5{% else %}#FFFBEB{% endif %}; border-color: {% if tesseract_ready %}#A7F3D0{% else %}#FDE68A{% endif %};">
+  <div class="card-body" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: {% if tesseract_ready %}#10B981{% else %}#F59E0B{% endif %}; color: white;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+          <circle cx="12" cy="13" r="3"/>
+        </svg>
+      </div>
+      <div>
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: {% if tesseract_ready %}#065F46{% else %}#92400E{% endif %};">
+          {% if tesseract_ready %}
+            Tesseract OCR Engine Active
+          {% else %}
+            Optical Character Recognition Engine in Resilient Fallback Mode
+          {% endif %}
+        </h4>
+        <p style="font-size: 0.82rem; color: {% if tesseract_ready %}#047857{% else %}#B45309{% endif %};">
+          {% if tesseract_ready %}
+            Automatic text, amount, date, and merchant recognition enabled. Upload any UPI or card payment screenshot.
+          {% else %}
+            Tesseract OCR binary is not detected on the system PATH. Receipts are stored securely with SHA-256 verification, and you can confirm or enter details manually below.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    <span class="badge {% if tesseract_ready %}normal{% else %}warning{% endif %}">
+      {% if tesseract_ready %}AI Engine Ready{% else %}Safe Fallback{% endif %}
+    </span>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" id="scannerGrid">
+  <!-- Left Column: Upload & Image Preview -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Upload Payment Screenshot</h2>
+        <p class="card-subtitle">Supported formats: PNG, JPG, JPEG, WEBP (Max 5MB)</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <!-- Drag & Drop Zone -->
+      <div class="dropzone" id="receiptDropzone" onclick="document.getElementById('receiptFileInput').click()">
+        <input type="file" id="receiptFileInput" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleFileSelect(event)">
+        <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <div class="dropzone-title">Click to browse or drag & drop screenshot</div>
+        <div class="dropzone-hint">UPI receipts (GPay, PhonePe, Paytm), POS slips, or invoices</div>
+      </div>
+
+      <!-- Preview Container -->
+      <div id="previewContainer" style="display: none; margin-top: 18px; text-align: center;">
+        <div style="position: relative; display: inline-block; max-width: 100%;">
+          <img id="receiptImagePreview" style="max-height: 340px; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); max-width: 100%; object-fit: contain;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="resetUpload()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9);">
+            Change Image
+          </button>
+        </div>
+      </div>
+
+      <!-- Processing Spinner -->
+      <div id="processingIndicator" style="display: none; margin-top: 18px; text-align: center; padding: 24px;">
+        <div style="display: inline-block; width: 36px; height: 36px; border: 3px solid #E2E8F0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="margin-top: 10px; font-weight: 600; color: var(--text-main); font-size: 0.92rem;">Analyzing screenshot & running OCR...</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Extracting merchant, transaction amount, date & payment method</p>
+      </div>
+
+      <!-- Duplicate Alert Banner -->
+      <div id="duplicateAlert" style="display: none; margin-top: 16px; padding: 12px 16px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius-md); color: #92400E; font-size: 0.85rem;">
+        ⚠️ <strong>Notice:</strong> This receipt has been uploaded previously based on cryptographic SHA-256 fingerprinting. Please verify to avoid recording duplicate expenses.
+      </div>
+
+      <!-- Raw OCR Text Accordion / Preview -->
+      <div id="rawTextContainer" style="display: none; margin-top: 16px;">
+        <details style="font-size: 0.82rem; color: var(--text-muted); background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px;">
+          <summary style="cursor: pointer; font-weight: 600; color: var(--text-main);">View Raw Extracted OCR Text</summary>
+          <pre id="rawTextContent" style="margin-top: 10px; white-space: pre-wrap; word-break: break-all; font-family: monospace; font-size: 0.78rem; background: #FFFFFF; padding: 10px; border-radius: 4px; border: 1px solid #E2E8F0;"></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Verification & Confirmation Form -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Verify & Confirm Expense</h2>
+        <p class="card-subtitle">Review extracted information before writing to MySQL</p>
+      </div>
+      <span class="badge normal" id="extractionStatusBadge">Awaiting Upload</span>
+    </div>
+    <div class="card-body">
+      <form id="verifyExpenseForm" onsubmit="handleConfirmExpense(event)">
+        <input type="hidden" id="verifiedReceiptId">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="verifiedAmount">Transaction Amount (₹) *</label>
+            <input type="number" step="0.01" min="0.01" id="verifiedAmount" class="form-control" placeholder="0.00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="verifiedDate">Transaction Date *</label>
+            <input type="date" id="verifiedDate" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="verifiedMerchant">Merchant / Recipient Name *</label>
+          <input type="text" id="verifiedMerchant" class="form-control" placeholder="e.g. Swiggy, Uber, Campus Bookstore" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="verifiedCategory">Assign Category *</label>
+            <select id="verifiedCategory" class="form-control" required>
+              <option value="">Select Category...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="verifiedPaymentMethod">Payment Method</label>
+            <select id="verifiedPaymentMethod" class="form-control">
+              <option value="UPI" selected>UPI (GPay / PhonePe / Paytm)</option>
+              <option value="Cash">Cash</option>
+              <option value="Debit Card">Debit Card</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Net Banking">Net Banking</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="verifiedNotes">Expense Notes / Memo</label>
+          <input type="text" id="verifiedNotes" class="form-control" placeholder="e.g. Verified from uploaded receipt">
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 0.8rem; color: var(--text-muted);">
+          🔒 <strong>Security Policy:</strong> ExpenseTrack never requests or stores UPI PINs, CVVs, OTPs, or financial credentials.
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="confirmExpenseBtn" style="width: 100%; padding: 12px;" disabled>
+          Confirm & Save Expense
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (max-width: 900px) {
+    #scannerGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/scan.js') }}"></script>
+{% endblock %}
+

@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In – ExpenseTrack Student Finance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('expensetrack_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+  <style>
+    /* =====================================================================
+       ExpenseTrack - Architectural Studio & Ledger Aesthetic (Anti-AI Slop)
+       Precision Grid Lines, Editorial Typography, Tactile Physical Surfaces
+       ===================================================================== */
+    
+    :root {
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+    }
+
+    /* Ambient Technical Grid Pattern */
+    .ledger-grid-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    }
+
+    [data-theme="light"] .ledger-grid-bg {
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+    }
+
+    /* Main Dual-Canvas Viewport Container */
+    .auth-viewport {
+      position: relative;
+      z-index: 1;
+      width: 100vw;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+    }
+
+    @media (max-width: 1024px) {
+      .auth-viewport {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* =====================================================================
+       LEFT SECTION: The Living Student Ledger & University Showcase
+       ===================================================================== */
+    .auth-showcase {
+      padding: 56px 64px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid var(--border-color);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.85), rgba(8, 12, 20, 0.95));
+      position: relative;
+      overflow: hidden;
+    }
+
+    [data-theme="light"] .auth-showcase {
+      background: linear-gradient(145deg, #F1F5F9, #E2E8F0);
+    }
+
+    .showcase-inner {
+      max-width: 620px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      justify-content: space-between;
+      gap: 36px;
+    }
+
+    /* Brand Header */
+    .showcase-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      background: #059669;
+      color: #FFFFFF;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.3rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+      flex-shrink: 0;
+    }
+
+    .brand-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      line-height: 1.15;
+    }
+
+    .brand-tag {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #059669;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    [data-theme="dark"] .brand-tag {
+      color: #34D399;
+    }
+
+    /* Editorial Headline */
+    .showcase-hero {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .showcase-headline {
+      font-family: var(--font-display);
+      font-size: clamp(2.1rem, 3.4vw, 2.9rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+      color: var(--text-main);
+    }
+
+    .showcase-headline .highlight {
+      color: #059669;
+      position: relative;
+    }
+
+    [data-theme="dark"] .showcase-headline .highlight {
+      color: #34D399;
+    }
+
+    .showcase-subhead {
+      font-size: 1.02rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+      max-width: 540px;
+    }
+
+    /* Tactile Student Passcard (Interactive Demo Account Persona) */
+    .student-passcard {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 22px 24px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+      cursor: pointer;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .student-passcard:hover {
+      border-color: #059669;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.4), 0 0 0 1px #059669;
+    }
+
+    .passcard-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    .passcard-pill {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(5, 150, 105, 0.14);
+      color: #059669;
+      border: 1px solid rgba(5, 150, 105, 0.3);
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    [data-theme="dark"] .passcard-pill {
+      color: #34D399;
+      border-color: rgba(52, 211, 153, 0.35);
+    }
+
+    .passcard-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 8px #10B981;
+      animation: pulseAnim 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .passcard-btn {
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: #059669;
+      color: #FFFFFF;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .passcard-btn:hover {
+      background: #047857;
+    }
+
+    .passcard-body {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .student-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1E293B, #0F172A);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #34D399;
+    }
+
+    .student-data-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 12px;
+    }
+
+    .data-unit {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .data-unit-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .data-unit-val {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Live Mini Ledger Pacing Widget */
+    .ledger-tape {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .tape-row-top {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+    }
+
+    .tape-progress-bar {
+      height: 6px;
+      background: var(--bg-surface-elevated);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .tape-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10B981, #059669);
+      border-radius: 3px;
+    }
+
+    .tape-stats-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--text-main);
+    }
+
+    .tape-stats-row strong {
+      color: #10B981;
+    }
+
+    /* Trust & Architecture Pillars */
+    .showcase-footer {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .trust-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .trust-badge svg {
+      width: 14px;
+      height: 14px;
+      color: #059669;
+      flex-shrink: 0;
+    }
+
+    /* =====================================================================
+       RIGHT SECTION: The Crisp, Surgical Auth Canvas
+       ===================================================================== */
+    .auth-panel {
+      padding: 56px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: var(--bg-surface);
+      position: relative;
+    }
+
+    @media (max-width: 640px) {
+      .auth-showcase, .auth-panel {
+        padding: 32px 20px;
+      }
+    }
+
+    /* Top Controls Bar (Theme Toggle) */
+    .auth-panel-nav {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      width: 100%;
+    }
+
+    .theme-chip-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.18s ease;
+    }
+
+    .theme-chip-btn:hover {
+      color: var(--text-main);
+      border-color: var(--border-hover);
+    }
+
+    /* Form Container */
+    .auth-form-card {
+      max-width: 420px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px 0;
+    }
+
+    /* Modern Segmented Tab Switcher */
+    .segment-control {
+      background: var(--bg-surface-elevated);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 28px;
+    }
+
+    .segment-tab {
+      padding: 10px;
+      text-align: center;
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-radius: 7px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      transition: all 0.18s ease;
+      font-family: var(--font-body);
+    }
+
+    .segment-tab:hover {
+      color: var(--text-main);
+    }
+
+    .segment-tab.active {
+      background: var(--bg-surface);
+      color: var(--text-main);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    [data-theme="light"] .segment-tab.active {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Form Titles */
+    .auth-form-header {
+      margin-bottom: 24px;
+    }
+
+    .auth-title {
+      font-family: var(--font-display);
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .auth-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Form Fields */
+    .field-row {
+      margin-bottom: 18px;
+    }
+
+    .field-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 7px;
+      letter-spacing: -0.01em;
+    }
+
+    .input-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-box input {
+      width: 100%;
+      height: 46px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0 14px;
+      font-size: 0.92rem;
+      font-family: var(--font-body);
+      color: var(--text-main);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .input-box input:focus {
+      border-color: #059669;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.18);
+    }
+
+    .input-box input::placeholder {
+      color: var(--text-subtle);
+    }
+
+    .input-toggle-eye {
+      position: absolute;
+      right: 12px;
+      background: transparent;
+      border: none;
+      color: var(--text-subtle);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .input-toggle-eye:hover {
+      color: var(--text-main);
+    }
+
+    /* Primary Submission Button */
+    .btn-submit-action {
+      width: 100%;
+      height: 48px;
+      background: #059669;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.94rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.28);
+    }
+
+    .btn-submit-action:hover {
+      background: #047857;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(5, 150, 105, 0.38);
+    }
+
+    .btn-submit-action:active {
+      transform: translateY(0);
+    }
+
+    .btn-submit-action:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .auth-alt-footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .auth-link {
+      color: #059669;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      margin-left: 4px;
+    }
+
+    [data-theme="dark"] .auth-link {
+      color: #34D399;
+    }
+
+    .auth-link:hover {
+      text-decoration: underline;
+    }
+
+    .auth-copyright-bar {
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+      text-align: center;
+      font-family: var(--font-mono);
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="ledger-grid-bg"></div>
+
+<div class="auth-viewport">
+
+  <!-- =====================================================================
+       LEFT SECTION: The Living Student Ledger & Academic Platform Showcase
+       ===================================================================== -->
+  <aside class="auth-showcase">
+    <div class="showcase-inner">
+      <!-- Brand Header -->
+      <div class="showcase-brand">
+        <div class="brand-mark">&fnof;</div>
+        <div class="brand-meta">
+          <div class="brand-name">ExpenseTrack</div>
+          <div class="brand-tag">Student Bursar & Ledger Engine</div>
+        </div>
+      </div>
+
+      <!-- Hero Statement -->
+      <div class="showcase-hero">
+        <h1 class="showcase-headline">
+          Master your semester allowance. <span class="highlight">Down to the last rupee.</span>
+        </h1>
+        <p class="showcase-subhead">
+          A dedicated financial workspace designed for university life. Track split mess bills, books, and daily UPI payments with strict monthly pacing, instant receipt extraction, and verified ACID data integrity.
+        </p>
+
+        <!-- Interactive Student Passcard (1-Click Persona Login) -->
+        <div class="student-passcard" id="studentPasscard" onclick="autoFillDemo()" title="Click to load pre-seeded student account">
+          <div class="passcard-top">
+            <div class="passcard-pill">
+              <span class="passcard-pulse"></span>
+              SEEDED DEMO STUDENT
+            </div>
+            <button type="button" class="passcard-btn">
+              1-Click Fast Pass &rarr;
+            </button>
+          </div>
+          <div class="passcard-body">
+            <div class="student-avatar">AS</div>
+            <div class="student-data-grid">
+              <div class="data-unit">
+                <span class="data-unit-label">ACCOUNT ID</span>
+                <span class="data-unit-val">student@expensetrack.edu</span>
+              </div>
+              <div class="data-unit">
+                <span class="data-unit-label">STUDENT PASS</span>
+                <span class="data-unit-val">Password123!</span>
+              </div>
+              <div class="data-unit">
+                <span class="data-unit-label">PERSONA</span>
+                <span class="data-unit-val">Aarav Sharma (B.Tech)</span>
+              </div>
+              <div class="data-unit">
+                <span class="data-unit-label">INITIAL LEDGER</span>
+                <span class="data-unit-val">22 Verified Expenses</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Pacing Ledger Tape -->
+        <div class="ledger-tape">
+          <div class="tape-row-top">
+            <span>MONTHLY ALLOWANCE CADENCE</span>
+            <span>70.6% PACED</span>
+          </div>
+          <div class="tape-progress-bar">
+            <div class="tape-progress-fill" style="width: 70.6%;"></div>
+          </div>
+          <div class="tape-stats-row">
+            <span>SPENT: <strong>&#8377;7,058.00</strong></span>
+            <span>CAP: <strong>&#8377;10,000.00</strong></span>
+            <span>ALLOWANCE: <strong>&#8377;2,942.00 (Safe)</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verified Architecture Pillars -->
+      <div class="showcase-footer">
+        <div class="trust-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>MariaDB InnoDB ACID</span>
+        </div>
+        <div class="trust-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>Scrypt Salted Hashing</span>
+        </div>
+        <div class="trust-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Offline Fallback OCR</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =====================================================================
+       RIGHT SECTION: Precision Architectural Sign-In Terminal
+       ===================================================================== -->
+  <main class="auth-panel">
+    <!-- Top Theme & Utility Control -->
+    <div class="auth-panel-nav">
+      <button type="button" class="theme-chip-btn" onclick="toggleTheme()" aria-label="Toggle visual theme">
+        <span id="themeLabelText">Theme: Dark</span>
+        <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Central Form Terminal -->
+    <div class="auth-form-card">
+      <div class="segment-control" role="tablist">
+        <button class="segment-tab active" id="tabLogin" onclick="switchTab('login')">
+          Sign In
+        </button>
+        <button class="segment-tab" id="tabRegister" onclick="switchTab('register')">
+          Create Account
+        </button>
+      </div>
+
+      <div class="auth-form-header">
+        <h2 class="auth-title" id="authTitle">Welcome back, Scholar</h2>
+        <p class="auth-desc" id="authSubtitle">Enter your credentials to access your financial dashboard and ledger.</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="field-row">
+          <label class="field-label" for="loginIdentifier">
+            <span>Username or College Email</span>
+          </label>
+          <div class="input-box">
+            <input type="text" id="loginIdentifier" placeholder="student@expensetrack.edu" required autofocus autocomplete="username">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label" for="loginPassword">
+            <span>Account Password</span>
+          </label>
+          <div class="input-box">
+            <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" class="input-toggle-eye" onclick="togglePasswordVisibility('loginPassword', this)" title="Show / Hide Password">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit-action" id="loginBtn">
+          <span>Authenticate & Open Dashboard</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Registration Form -->
+      <form id="registerForm" style="display: none;" onsubmit="handleRegister(event)">
+        <div class="field-row">
+          <label class="field-label" for="regFullName">
+            <span>Student Full Name *</span>
+          </label>
+          <div class="input-box">
+            <input type="text" id="regFullName" placeholder="e.g. Aarav Sharma" required autocomplete="name">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label" for="regUsername">
+            <span>Username *</span>
+          </label>
+          <div class="input-box">
+            <input type="text" id="regUsername" placeholder="e.g. aarav_26" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label" for="regEmail">
+            <span>College / Personal Email *</span>
+          </label>
+          <div class="input-box">
+            <input type="email" id="regEmail" placeholder="student@university.edu" required autocomplete="email">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label" for="regPassword">
+            <span>Password (Min. 8 characters) *</span>
+          </label>
+          <div class="input-box">
+            <input type="password" id="regPassword" placeholder="••••••••" minlength="8" required autocomplete="new-password">
+            <button type="button" class="input-toggle-eye" onclick="togglePasswordVisibility('regPassword', this)" title="Show / Hide Password">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit-action" id="registerBtn">
+          <span>Create Student Ledger Account</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </form>
+
+      <div class="auth-alt-footer">
+        <span id="altFooterPrompt">First time tracking expenses?</span>
+        <button type="button" class="auth-link" id="altFooterAction" onclick="toggleAuthMode()">
+          Register new student account &rarr;
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Metadata -->
+    <div class="auth-copyright-bar">
+      EXPENSETRACK &bull; 3RD SEMESTER ACADEMIC VIVA &bull; 2026
+    </div>
+  </main>
+
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+<script>
+  let currentAuthMode = 'login';
+
+  function updateThemeUI(theme) {
+    const isDark = theme === 'dark';
+    const label = document.getElementById("themeLabelText");
+    const icon = document.getElementById("themeIcon");
+    if (label) label.textContent = isDark ? "Theme: Dark" : "Theme: Light";
+    if (icon) {
+      icon.innerHTML = isDark
+        ? '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>'
+        : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+    }
+  }
+
+  function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    localStorage.setItem('expensetrack_theme', nextTheme);
+    updateThemeUI(nextTheme);
+  }
+
+  (function initTheme() {
+    const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    updateThemeUI(activeTheme);
+  })();
+
+  function switchTab(mode) {
+    currentAuthMode = mode;
+    const isLogin = mode === 'login';
+    
+    document.getElementById("tabLogin").classList.toggle("active", isLogin);
+    document.getElementById("tabRegister").classList.toggle("active", !isLogin);
+    
+    document.getElementById("loginForm").style.display = isLogin ? "block" : "none";
+    document.getElementById("registerForm").style.display = isLogin ? "none" : "block";
+
+    const title = document.getElementById("authTitle");
+    const sub = document.getElementById("authSubtitle");
+    const prompt = document.getElementById("altFooterPrompt");
+    const action = document.getElementById("altFooterAction");
+
+    if (isLogin) {
+      title.textContent = "Welcome back, Scholar";
+      sub.textContent = "Enter your credentials to access your financial dashboard and ledger.";
+      prompt.textContent = "First time tracking expenses?";
+      action.textContent = "Register new student account →";
+      document.getElementById("loginIdentifier").focus();
+    } else {
+      title.textContent = "Create Student Profile";
+      sub.textContent = "Set up your student account to begin logging and categorizing expenses.";
+      prompt.textContent = "Already have an account?";
+      action.textContent = "Sign in to existing account →";
+      document.getElementById("regFullName").focus();
+    }
+  }
+
+  function toggleAuthMode() {
+    switchTab(currentAuthMode === 'login' ? 'register' : 'login');
+  }
+
+  function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    btn.innerHTML = isPassword
+      ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`
+      : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+  }
+
+  function autoFillDemo() {
+    switchTab('login');
+    const idInput = document.getElementById("loginIdentifier");
+    const passInput = document.getElementById("loginPassword");
+    idInput.value = "student@expensetrack.edu";
+    passInput.value = "Password123!";
+
+    // High tactile pulse to confirm field injection
+    idInput.style.borderColor = "#059669";
+    passInput.style.borderColor = "#059669";
+    setTimeout(() => {
+      idInput.style.borderColor = "";
+      passInput.style.borderColor = "";
+    }, 1200);
+
+    showToast("Filled demo student credentials (student@expensetrack.edu). Ready to sign in.", "info");
+    document.getElementById("loginBtn").focus();
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById("loginBtn");
+    btn.disabled = true;
+    btn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin">
+        <line x1="12" y1="2" x2="12" y2="6"></line>
+        <line x1="12" y1="18" x2="12" y2="22"></line>
+        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+        <line x1="2" y1="12" x2="6" y2="12"></line>
+        <line x1="18" y1="12" x2="22" y2="12"></line>
+        <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+        <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+      </svg>
+      Verifying Credentials...
+    `;
+
+    const identifier = document.getElementById("loginIdentifier").value.trim();
+    const password = document.getElementById("loginPassword").value;
+
+    try {
+      await API.post("/api/auth/login", { identifier, password });
+      showToast("Authentication confirmed. Accessing student dashboard...", "success");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 400);
+    } catch (err) {
+      showToast(err.message || "Invalid credentials", "error");
+      btn.disabled = false;
+      btn.innerHTML = `
+        <span>Authenticate & Open Dashboard</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      `;
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    const btn = document.getElementById("registerBtn");
+    btn.disabled = true;
+    btn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin">
+        <line x1="12" y1="2" x2="12" y2="6"></line>
+        <line x1="12" y1="18" x2="12" y2="22"></line>
+        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+        <line x1="2" y1="12" x2="6" y2="12"></line>
+        <line x1="18" y1="12" x2="22" y2="12"></line>
+        <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+        <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+      </svg>
+      Initializing Account...
+    `;
+
+    const payload = {
+      full_name: document.getElementById("regFullName").value.trim(),
+      username: document.getElementById("regUsername").value.trim(),
+      email: document.getElementById("regEmail").value.trim(),
+      password: document.getElementById("regPassword").value,
+    };
+
+    try {
+      await API.post("/api/auth/register", payload);
+      showToast("Account initialized. Welcome to ExpenseTrack.", "success");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 400);
+    } catch (err) {
+      showToast(err.message || "Failed to create student account", "error");
+      btn.disabled = false;
+      btn.innerHTML = `
+        <span>Create Student Ledger Account</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      `;
+    }
+  }
+</script>
+</body>
+</html>

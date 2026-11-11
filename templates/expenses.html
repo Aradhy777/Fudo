@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}All Expenses – ExpenseTrack{% endblock %}
+{% block page_title %}Expense Management{% endblock %}
+
+{% block content %}
+<!-- Filter & Search Toolbar -->
+<div class="card" style="margin-bottom: 20px;">
+  <div class="card-body" style="padding: 18px 24px;">
+    <form id="filterForm" onsubmit="handleFilterSubmit(event)">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) 120px 100px; gap: 12px; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-size: 0.78rem;">Search Merchant / Notes</label>
+          <input type="text" id="filterSearch" class="form-control" placeholder="Search keyword...">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-size: 0.78rem;">Category</label>
+          <select id="filterCategory" class="form-control">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-size: 0.78rem;">From Date</label>
+          <input type="date" id="filterStartDate" class="form-control">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-size: 0.78rem;">To Date</label>
+          <input type="date" id="filterEndDate" class="form-control">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="height: 42px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Filter
+        </button>
+
+        <button type="button" class="btn btn-secondary" onclick="resetFilters()" style="height: 42px;">
+          Reset
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Main Expenses Table Card -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Recorded Expenses</h2>
+      <p class="card-subtitle" id="tableRecordSummary">Showing records from MySQL database</p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <a href="/scan" class="btn btn-secondary btn-sm">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+          <circle cx="12" cy="13" r="3"/>
+        </svg>
+        Scan Receipt
+      </a>
+      <button class="btn btn-primary btn-sm" onclick="openQuickAddExpense()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        New Expense
+      </button>
+    </div>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table" id="expensesTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Merchant</th>
+            <th>Category</th>
+            <th>Method</th>
+            <th>Notes</th>
+            <th>Receipt</th>
+            <th style="text-align: right;">Amount</th>
+            <th style="text-align: center; width: 100px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="expensesTableBody">
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              Loading expenses from MySQL...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="expensesEmptyState" style="display: none;">
+      <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      <h3 class="empty-state-title">No Matching Expenses Found</h3>
+      <p class="empty-state-text">No records match your selected filter criteria. Try clearing filters or recording a new expense.</p>
+      <button class="btn btn-secondary btn-sm" onclick="resetFilters()">Clear Filters</button>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;" id="paginationBar">
+      <span style="font-size: 0.85rem; color: var(--text-muted);" id="paginationInfo">Page 1 of 1</span>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="btnPrevPage" onclick="changePage(-1)" disabled>Previous</button>
+        <button class="btn btn-secondary btn-sm" id="btnNextPage" onclick="changePage(1)" disabled>Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Expense Modal -->
+<div class="modal-backdrop" id="editExpenseModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Expense</h3>
+      <button class="modal-close" onclick="closeModal('editExpenseModal')">&times;</button>
+    </div>
+    <form id="editExpenseForm" onsubmit="handleUpdateExpense(event)">
+      <input type="hidden" id="editExpenseId">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="editAmount">Amount (₹) *</label>
+            <input type="number" step="0.01" min="0.01" id="editAmount" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editDate">Date *</label>
+            <input type="date" id="editDate" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="editMerchant">Merchant *</label>
+          <input type="text" id="editMerchant" class="form-control" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="editCategory">Category *</label>
+            <select id="editCategory" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editPaymentMethod">Payment Method</label>
+            <select id="editPaymentMethod" class="form-control">
+              <option value="UPI">UPI</option>
+              <option value="Cash">Cash</option>
+              <option value="Debit Card">Debit Card</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Net Banking">Net Banking</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="editNotes">Notes</label>
+          <input type="text" id="editNotes" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editExpenseModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="editSaveBtn">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/expenses.js') }}"></script>
+{% endblock %}
+

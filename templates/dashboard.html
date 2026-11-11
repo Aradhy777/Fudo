@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – ExpenseTrack{% endblock %}
+{% block page_title %}Financial Overview{% endblock %}
+
+{% block header_actions %}
+<div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+  <!-- Month & Year Selector -->
+  <div style="display: flex; gap: 6px; align-items: center;">
+    <select id="dashMonthSelect" class="form-control" style="width: 130px; height: 38px; font-weight: 700; font-size: 0.85rem;" onchange="handleDashboardMonthChange()">
+      <option value="1">January</option>
+      <option value="2">February</option>
+      <option value="3">March</option>
+      <option value="4">April</option>
+      <option value="5">May</option>
+      <option value="6">June</option>
+      <option value="7">July</option>
+      <option value="8">August</option>
+      <option value="9">September</option>
+      <option value="10" selected>October</option>
+      <option value="11">November</option>
+      <option value="12">December</option>
+    </select>
+    <select id="dashYearSelect" class="form-control" style="width: 92px; height: 38px; font-weight: 700; font-size: 0.85rem;" onchange="handleDashboardMonthChange()">
+      <option value="2025">2025</option>
+      <option value="2026" selected>2026</option>
+      <option value="2027">2027</option>
+    </select>
+  </div>
+
+  <a href="/scan" class="btn btn-secondary btn-sm" style="height: 38px;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+      <circle cx="12" cy="13" r="3"/>
+    </svg>
+    Scan Receipt
+  </a>
+
+  <button class="btn btn-primary btn-sm" onclick="openQuickAddExpense()" style="height: 38px;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Add Expense
+  </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- 1. Architectural Command Strip (Financial Pulse) -->
+<div class="pulse-banner">
+  <div>
+    <div class="pulse-greeting" id="pulseGreeting">Financial Pulse: October 2026</div>
+    <div class="pulse-sub" id="pulseSub">Tracking student expenditures and live budget pacing for October 2026</div>
+  </div>
+  <div class="pulse-chips">
+    <div class="pulse-chip" id="pulseStatusChip">
+      <span class="pulse-chip-dot green" id="pulseStatusDot"></span>
+      <span id="pulseStatusText">70.6% Budget Used</span>
+    </div>
+    <div class="pulse-chip">
+      <span class="pulse-chip-dot amber"></span>
+      <span id="pulseDailyAllowance">Safe Daily: ₹1,471/day</span>
+    </div>
+    <div class="pulse-chip">
+      <span class="pulse-chip-dot purple"></span>
+      <span id="pulseTopCategory">Top: Food (40.4%)</span>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Four Bento Metric Cards -->
+<div class="stats-grid">
+  <!-- Metric 1: Total Spent -->
+  <div class="stat-card card-accent-emerald">
+    <div class="stat-header">
+      <span class="stat-title">Month Spending</span>
+      <div class="stat-icon-wrapper emerald">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      </div>
+    </div>
+    <div class="stat-value" id="kpiTotalSpent">₹0.00</div>
+    <div class="stat-caption" style="display: flex; justify-content: space-between; align-items: center;">
+      <span id="kpiMonthLabel">October 2026</span>
+      <span class="trend-badge neutral" id="kpiMoMBadge">0% vs prior</span>
+    </div>
+    <div class="stat-micro-progress">
+      <div class="stat-micro-fill" id="kpiSpendFill" style="width: 0%; background: #10B981;"></div>
+    </div>
+  </div>
+
+  <!-- Metric 2: Monthly Budget Cap -->
+  <div class="stat-card card-accent-blue">
+    <div class="stat-header">
+      <span class="stat-title">Monthly Cap</span>
+      <div class="stat-icon-wrapper blue">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a8 8 0 0 1-16 0V6"/>
+          <path d="M18 12h4"/>
+        </svg>
+      </div>
+    </div>
+    <div class="stat-value" id="kpiMonthlyBudget">₹0.00</div>
+    <div class="stat-caption" style="display: flex; justify-content: space-between; align-items: center;">
+      <span id="kpiCapNotice">Overall student cap</span>
+      <a href="/budgets" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.78rem;">Configure &rarr;</a>
+    </div>
+    <div class="stat-micro-progress">
+      <div class="stat-micro-fill" style="width: 100%; background: #3B82F6;"></div>
+    </div>
+  </div>
+
+  <!-- Metric 3: Remaining Allowance -->
+  <div class="stat-card card-accent-amber" id="kpiRemainingCard">
+    <div class="stat-header">
+      <span class="stat-title">Remaining Allowance</span>
+      <div class="stat-icon-wrapper amber" id="kpiRemainingWrapper">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+        </svg>
+      </div>
+    </div>
+    <div class="stat-value" id="kpiRemainingBudget">₹0.00</div>
+    <div class="stat-caption" style="display: flex; justify-content: space-between; align-items: center;">
+      <span id="kpiBudgetUsed">0% Used</span>
+      <span id="kpiDaysLeft" style="font-size: 0.76rem; color: var(--text-muted);">0 days left</span>
+    </div>
+    <div class="stat-micro-progress">
+      <div class="stat-micro-fill" id="kpiRemainingFill" style="width: 0%; background: #F59E0B;"></div>
+    </div>
+  </div>
+
+  <!-- Metric 4: Transactions Count -->
+  <div class="stat-card card-accent-purple">
+    <div class="stat-header">
+      <span class="stat-title">Transactions</span>
+      <div class="stat-icon-wrapper purple">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      </div>
+    </div>
+    <div class="stat-value" id="kpiExpenseCount">0</div>
+    <div class="stat-caption" style="display: flex; justify-content: space-between; align-items: center;">
+      <span id="kpiAvgTx">Avg: ₹0 / tx</span>
+      <span style="font-size: 0.76rem; color: #8B5CF6; font-weight: 700;">Verified Logs</span>
+    </div>
+    <div class="stat-micro-progress">
+      <div class="stat-micro-fill" style="width: 100%; background: #8B5CF6;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Visual Charts Grid -->
+<div class="charts-grid">
+  <!-- Left: Spending History & Trends Card -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Spending History & Trends</h2>
+        <p class="card-subtitle">Expenditure progression across 6 calendar cycles</p>
+      </div>
+      <div class="chart-controls">
+        <div class="chart-toggle-group">
+          <button type="button" class="chart-toggle-btn active" id="btnTrendBar" onclick="setTrendChartType('bar')">Bar</button>
+          <button type="button" class="chart-toggle-btn" id="btnTrendLine" onclick="setTrendChartType('line')">Area</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="position: relative; height: 290px; width: 100%;">
+        <canvas id="monthlyTrendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Category Breakdown Donut + Progress List -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Category Breakdown</h2>
+        <p class="card-subtitle">Current month allocation</p>
+      </div>
+      <a href="/insights" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 4px 10px;">Full Insights &rarr;</a>
+    </div>
+    <div class="card-body">
+      <div class="donut-layout">
+        <!-- Donut Ring with Center Overlay -->
+        <div class="donut-wrapper">
+          <canvas id="categoryChart"></canvas>
+          <div class="donut-center-info">
+            <div class="donut-center-label">Total Spent</div>
+            <div class="donut-center-val" id="donutCenterTotal">₹0</div>
+          </div>
+        </div>
+
+        <!-- Category Progress Breakdown List -->
+        <div class="category-breakdown-list" id="categoryBreakdownList">
+          <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 20px;">
+            Loading breakdown...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Operational Ledger: Recent Transactions -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Recent Transactions</h2>
+      <p class="card-subtitle">Real-time ledger entries from MySQL database</p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <input type="text" id="quickTableSearch" class="form-control" placeholder="Quick search merchant..." style="width: 200px; height: 34px; font-size: 0.82rem;" oninput="filterRecentTable(this.value)">
+      <a href="/expenses" class="btn btn-secondary btn-sm" style="height: 34px;">Full Ledger &rarr;</a>
+    </div>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table" id="recentTransactionsTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Merchant / Payee</th>
+            <th>Category</th>
+            <th>Payment Mode</th>
+            <th>Description</th>
+            <th style="text-align: right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="recentTransactionsBody">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 36px; color: var(--text-muted);">
+              Loading transactions from MySQL...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State Container -->
+    <div class="empty-state" id="dashboardEmptyState" style="display: none;">
+      <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
+      </svg>
+      <h3 class="empty-state-title">No Expenses Logged This Month</h3>
+      <p class="empty-state-text">Start managing your college budget by adding your first expense or scanning a payment screenshot!</p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button class="btn btn-primary btn-sm" onclick="openQuickAddExpense()">Add Manual Expense</button>
+        <a href="/scan" class="btn btn-secondary btn-sm">Upload Receipt Screenshot</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

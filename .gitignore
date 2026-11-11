@@ -1,0 +1,23 @@
+# Environment variables & secrets
+.env
+*.env.local
+
+# Local Database binaries & data directory
+.mariadb_server/
+
+# Uploaded receipts & user assets
+uploads/
+
+# Python cache & tests
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE & OS files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
